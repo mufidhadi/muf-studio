@@ -240,7 +240,7 @@ class ScreenBrushOverlay(QWidget):
                     color, 
                     width, 
                     Qt.PenStyle.SolidLine, 
-                    Qt.PenCapStyle.RoundLine, 
+                    Qt.PenCapStyle.RoundCap, 
                     Qt.PenJoinStyle.RoundJoin
                 )
                 painter.setPen(pen)
