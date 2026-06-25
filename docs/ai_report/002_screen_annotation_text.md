@@ -74,11 +74,20 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
     *   **Tantangan DPI Scaling Click-Through:** Dengan penataan DPI Scaling Windows (seperti 125% atau 150%), interpolasi tekstur layered window dapat membulatkan nilai transparansi alpha `1` (`QColor(0, 0, 0, 1)`) menjadi `0`, yang mengakibatkan OS mendeteksinya sebagai pixel kosong dan melempar klik mouse (click-through) sehingga kursor crosshair tidak muncul.
     *   *Solusi:* Meningkatkan alpha warna dasar background transparan menjadi `5` (`QColor(0, 0, 0, 5)`). Opacity ~1.96% ini terbukti 100% aman terhadap pemotongan rounding interpolasi OS, namun tetap tidak kasat mata oleh mata manusia.
 *   **Tantangan Mouse Terjebak (Mouse Trap) & Sinkronisasi:**
-    *   **Tantangan:** User tidak dapat mengeklik tombol Control Panel utama karena tertutup oleh overlay fullscreen.
-    *   *Solusi:* Menambahkan floating toolbar interaktif langsung pada window overlay yang secara otomatis diselaraskan secara bi-directional (dua arah) ke Control Panel utama lewat signal-slot PyQt6. Dengan menekan tombol **❌ Close** pada overlay toolbar, mode menggambar langsung nonaktif dan kontrol mouse kembali ke sistem operasi secara instan.
+    *   **Tantangan:** User tidak dapat mengeklik tombol apapun (termasuk toolbar yang di-embed sebagai child widget overlay) karena pada Windows, child widget di dalam window ber-attribute `WA_TranslucentBackground` gagal menerima mouse events. DWM menganggap area transparan sebagai "tidak ada" untuk hit-testing.
+    *   **Root Cause Tambahan:** Penggunaan `setStyleSheet("background: transparent;")` pada overlay menyebar ke semua child widget, memperburuk masalah click-through.
+    *   *Solusi Akhir (Toolbar Sebagai Window Top-Level Terpisah):*
+        *   Memisahkan toolbar ke class `AnnotationToolbarWindow` di [muf_studio/annotation_toolbar.py](file:///D:/project/mufid/muf_studio/muf_studio/annotation_toolbar.py) yang merupakan **top-level window independen** (tanpa parent ke overlay).
+        *   Toolbar menggunakan `WindowStaysOnTopHint | FramelessWindowHint | Tool` tanpa `WA_TranslucentBackground`, sehingga semua tombol 100% bisa diklik di Windows.
+        *   Menghapus `setStyleSheet("background: transparent;")` global dari overlay.
+        *   Overlay memanggil `toolbar.show()` / `toolbar.hide()` saat toggle drawing mode.
+        *   Menambahkan "Arah C" pada koordinasi sinyal di `main.py`: Toolbar → Overlay & Panel, sehingga ketiga komponen tetap sinkron.
+    *   **Commit:** `fc8b91c`
 
 ---
 
 ## 4. Lesson Learned
 *   Dengan merancang skema data histori gambar yang polimorfik (membedakan jenis element dari properti `"type"`), manipulasi state seperti Undo dan Clear All menjadi sangat mudah dan meminimalisir kemungkinan terjadinya inkonsistensi status aplikasi.
 *   Pemisahan logika penulisan teks dinamis (memanfaatkan QLineEdit bawaan Qt) dan representasi statis (memakai painter drawText) merupakan pendekatan terbaik untuk menjaga efisiensi memori dan responsivitas interaksi mouse di layar.
+*   **Pada Windows, JANGAN pernah meletakkan child widget interaktif (QPushButton, dsb.) di dalam window ber-attribute `WA_TranslucentBackground`.** DWM akan menganggap area transparan sebagai "lubang" dan tidak meregistrasi klik mouse pada child widget. Solusi robust: jadikan toolbar/kontrol sebagai **window top-level terpisah** tanpa transparansi.
+*   **Hindari `setStyleSheet("background: transparent;")` secara global** pada window overlay karena CSS ini menyebar ke semua child widget dan memperparah masalah click-through.
