@@ -7,7 +7,7 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
 ## 1. Detail Informasi Tugas
 *   **Nama Tugas:** Penambahan Fitur Coretan & Tulisan di Layar (Screen Annotation)
 *   **Nama Branch:** `feature/screen-annotation-text`
-*   **Nomor Hash Commit:** `07c2ed5beadf84ad2164d09abefc1aec338da69f`
+*   **Nomor Hash Commit:** `b731b22138a39b3bb8661b46b6b4053d9c295c44`
 *   **Nama & URL Repo:** mufidhadi/muf-studio (https://github.com/mufidhadi/muf-studio)
 *   **Tech Stack:**
     *   Python (CPython >= 3.12)
@@ -41,8 +41,16 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
 8.  **Penyempurnaan Overlay (`screen_brush.py`):**
     *   Mengubah penentuan ukuran overlay menggunakan `QGuiApplication.screenAt(QCursor.pos())` agar dinamis mengikuti letak kursor mouse pada sistem multi-monitor.
     *   Meningkatkan alpha background penutup dari `1` menjadi `5` (`QColor(0, 0, 0, 5)`) agar aman dari pembulatan interpolasi DWM saat Windows DPI Scaling aktif.
-9.  **Eksekusi Test Suite (TDD - Green Phase):** Menjalankan pengujian menggunakan `uv run pytest` dan memastikan semua test suite hijau/lulus (27 passed).
-10. **Pembersihan & Komit:** Menyimpan seluruh file perubahan ke Git dengan hash commit tercantum di atas.
+9.  **Mengatasi Masalah Mouse Terjebak (Mouse Trap):**
+    *   **Tantangan:** Saat mode anotasi aktif, overlay menutupi seluruh layar dan menangkap input mouse agar user bisa menggambar. Hal ini mencegah user mengeklik tombol/slider di Control Panel (karena letaknya di bawah overlay).
+    *   **Solusi (Floating Toolbar pada Overlay + Sinkronisasi Dua Arah):**
+        *   Menambahkan floating toolbar horizontal (`self.toolbar = QWidget(self)`) di bagian tengah-atas overlay yang berisi label logo, pilihan tool (Pen vs Text), circular color picker, tombol Undo, tombol Clear, dan tombol **Close (❌)** untuk keluar dari mode anotasi secara instan.
+        *   Menambahkan unit test `test_screen_brush_toolbar_initialization` dan `test_screen_brush_toolbar_clicks` di `tests/test_screen_brush.py`.
+        *   Menambahkan unit test `test_control_panel_brush_sync_setters` di `tests/test_control_panel.py` untuk menguji setter sinkronisasi pada panel kontrol.
+        *   Menambahkan integration test `test_integration_brush_bidirectional_sync` di `tests/test_integration.py` untuk memverifikasi sinkronisasi dua arah.
+        *   Menghubungkan sinyal dua arah antara `ScreenBrushOverlay` dan `ControlPanelWindow` di `main.py` sehingga perubahan status di salah satu sisi (seperti ganti warna, tool, atau menonaktifkan gambar) langsung tersinkronisasi secara otomatis ke sisi lainnya.
+10. **Eksekusi Test Suite (TDD - Green Phase):** Menjalankan pengujian menggunakan `uv run pytest` dan memastikan seluruh **31 pengujian** lulus/hijau.
+11. **Pembersihan & Komit:** Menyimpan seluruh file perubahan ke Git dengan hash commit tercantum di atas.
 
 ---
 
@@ -65,6 +73,9 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
     *   *Solusi:* Menggunakan `QGuiApplication.screenAt(QCursor.pos())` untuk mendeteksi posisi kursor secara dinamis dan menempatkan overlay tepat di monitor aktif tempat user ingin menggambar.
     *   **Tantangan DPI Scaling Click-Through:** Dengan penataan DPI Scaling Windows (seperti 125% atau 150%), interpolasi tekstur layered window dapat membulatkan nilai transparansi alpha `1` (`QColor(0, 0, 0, 1)`) menjadi `0`, yang mengakibatkan OS mendeteksinya sebagai pixel kosong dan melempar klik mouse (click-through) sehingga kursor crosshair tidak muncul.
     *   *Solusi:* Meningkatkan alpha warna dasar background transparan menjadi `5` (`QColor(0, 0, 0, 5)`). Opacity ~1.96% ini terbukti 100% aman terhadap pemotongan rounding interpolasi OS, namun tetap tidak kasat mata oleh mata manusia.
+*   **Tantangan Mouse Terjebak (Mouse Trap) & Sinkronisasi:**
+    *   **Tantangan:** User tidak dapat mengeklik tombol Control Panel utama karena tertutup oleh overlay fullscreen.
+    *   *Solusi:* Menambahkan floating toolbar interaktif langsung pada window overlay yang secara otomatis diselaraskan secara bi-directional (dua arah) ke Control Panel utama lewat signal-slot PyQt6. Dengan menekan tombol **❌ Close** pada overlay toolbar, mode menggambar langsung nonaktif dan kontrol mouse kembali ke sistem operasi secara instan.
 
 ---
 
