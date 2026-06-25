@@ -1,8 +1,10 @@
 import sys
 import argparse
+from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication
 from muf_studio.camera import MockCameraService, OpenCVCameraService
 from muf_studio.gui import FloatingWebcamWidget
+from muf_studio.control_panel import ControlPanelWindow
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -34,8 +36,9 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Floating Webcam Studio")
     
-    # 2. Inisialisasi Tampilan Widget
+    # 2. Inisialisasi Tampilan Widget & Panel Kontrol
     widget = FloatingWebcamWidget()
+    panel = ControlPanelWindow()
     
     active_thread = None
     fps = args.fps
@@ -58,28 +61,63 @@ def main():
         if source_type == "mock":
             print("Beralih ke Mock Camera...")
             active_thread = MockCameraService(fps=fps)
+            # Selaraskan combobox pada panel kontrol
+            panel.source_combo.blockSignals(True)
+            panel.source_combo.setCurrentIndex(2)  # Mock Camera
+            panel.source_combo.blockSignals(False)
         else:
             print(f"Beralih ke Webcam Device {index}...")
             active_thread = OpenCVCameraService(camera_index=index, fps=fps)
+            # Selaraskan combobox pada panel kontrol
+            panel.source_combo.blockSignals(True)
+            panel.source_combo.setCurrentIndex(index)  # Webcam index 0 atau 1
+            panel.source_combo.blockSignals(False)
             
         # Hubungkan sinyal frame baru ke widget
         active_thread.frame_received.connect(widget.update_frame)
         active_thread.start()
 
-    # Daftarkan callback switch camera ke widget
+    # Daftarkan callback switch camera ke widget (klik kanan menu)
     widget.on_camera_source_changed = change_camera_source
+
+    # --- Koordinasi Sinyal Bi-directional (SOLID) ---
+    
+    # Arah A: Panel Kontrol -> Floating Widget
+    panel.opacity_changed.connect(widget.set_window_opacity)
+    panel.size_changed.connect(lambda s: widget.resize(s, s))
+    panel.mirror_toggled.connect(widget.set_mirror_mode)
+    panel.pause_toggled.connect(widget.toggle_pause)
+    panel.source_changed.connect(change_camera_source)
+    panel.visibility_toggled.connect(widget.setVisible)
+    
+    # Arah B: Floating Widget -> Panel Kontrol
+    widget.resized.connect(panel.set_size_value)
+    widget.pause_changed.connect(panel.set_paused_state)
 
     # 4. Inisialisasi source kamera pertama saat startup
     initial_source = "mock" if args.mock else "webcam"
     initial_index = args.camera
     change_camera_source(initial_source, initial_index)
 
-    # 5. Tampilkan Widget dan jalankan event loop
-    # Posisikan window di pojok kanan atas layar secara default sebagai UX yang baik
+    # Sinkronisasi status awal pada panel kontrol
+    panel.set_size_value(widget.width())
+    panel.set_opacity_value(widget.windowOpacity())
+    panel.set_mirror_checked(widget.is_mirror_mode())
+    panel.set_paused_state(widget.is_paused())
+
+    # 5. Posisikan Window berdampingan secara elegan di kanan layar
     screen = app.primaryScreen().geometry()
-    widget.move(screen.width() - widget.width() - 40, 40)
     
+    # Floating widget di pojok kanan atas
+    widget.move(screen.width() - widget.width() - 40, 40)
     widget.show()
+    
+    # Panel kontrol di sebelah kiri floating widget
+    panel.move(screen.width() - widget.width() - panel.width() - 80, 40)
+    panel.show()
+    
+    # Menghubungkan tombol tutup panel kontrol untuk keluar dari seluruh aplikasi
+    panel.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, True)
     
     # Run loop
     exit_code = app.exec()

@@ -1,4 +1,4 @@
-from PyQt6.QtCore import Qt, QPoint, QRect
+from PyQt6.QtCore import Qt, QPoint, QRect, pyqtSignal
 from PyQt6.QtGui import QPainter, QPainterPath, QColor, QPen, QImage, QAction, QActionGroup
 from PyQt6.QtWidgets import QWidget, QMenu, QApplication
 
@@ -7,6 +7,11 @@ class FloatingWebcamWidget(QWidget):
     Widget utama GUI untuk menampilkan video webcam di window persegi,
     mengambang (always on top), borderless, dan bisa digeser/di-resize.
     """
+    # Sinyal kustom ketika ukuran window persegi berubah (untuk sinkronisasi control panel)
+    resized = pyqtSignal(int)
+    # Sinyal kustom ketika status pause webcam berubah
+    pause_changed = pyqtSignal(bool)
+
     def __init__(self, parent=None):
         super().__init__(parent)
         
@@ -77,6 +82,7 @@ class FloatingWebcamWidget(QWidget):
 
     def toggle_pause(self):
         self._paused = not self._paused
+        self.pause_changed.emit(self._paused)
         self.update()
 
     def set_window_opacity(self, opacity):
@@ -201,6 +207,10 @@ class FloatingWebcamWidget(QWidget):
         self.setGeometry(new_geom)
         
         event.accept()
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        self.resized.emit(event.size().width())
 
     # --- Double Click untuk Pause/Resume ---
     
