@@ -6,6 +6,7 @@ from muf_studio.camera import MockCameraService, OpenCVCameraService
 from muf_studio.gui import FloatingWebcamWidget
 from muf_studio.control_panel import ControlPanelWindow
 from muf_studio.screen_brush import ScreenBrushOverlay
+from muf_studio.annotation_toolbar import AnnotationToolbarWindow
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -37,10 +38,16 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Floating Webcam Studio")
     
-    # 2. Inisialisasi Tampilan Widget, Panel Kontrol, & Brush Overlay
+    # 2. Inisialisasi Tampilan Widget, Panel Kontrol, Brush Overlay, & Toolbar Terpisah
     widget = FloatingWebcamWidget()
     panel = ControlPanelWindow()
     brush_overlay = ScreenBrushOverlay()
+    
+    # Toolbar anotasi sebagai window top-level terpisah (BUKAN child dari overlay)
+    # Ini solusi untuk bug Windows dimana child widget di dalam window
+    # WA_TranslucentBackground tidak bisa menerima mouse events.
+    annotation_toolbar = AnnotationToolbarWindow()
+    brush_overlay.set_toolbar(annotation_toolbar)
     
     active_thread = None
     fps = args.fps
@@ -111,6 +118,19 @@ def main():
     brush_overlay.color_changed.connect(panel.set_brush_color)
     brush_overlay.width_changed.connect(panel.set_brush_width)
 
+    # Arah C: Toolbar Terpisah -> Overlay & Panel Kontrol
+    # Toolbar close -> matikan overlay
+    annotation_toolbar.close_requested.connect(lambda: brush_overlay.set_drawing_enabled(False))
+    # Toolbar tool change -> update overlay & panel
+    annotation_toolbar.tool_changed.connect(brush_overlay.set_tool_mode)
+    annotation_toolbar.tool_changed.connect(panel.set_brush_tool)
+    # Toolbar color change -> update overlay & panel
+    annotation_toolbar.color_changed.connect(brush_overlay.set_pen_color)
+    annotation_toolbar.color_changed.connect(panel.set_brush_color)
+    # Toolbar undo/clear -> forward ke overlay
+    annotation_toolbar.undo_requested.connect(brush_overlay.undo)
+    annotation_toolbar.clear_requested.connect(brush_overlay.clear_all)
+
     # 4. Inisialisasi source kamera pertama saat startup
     initial_source = "mock" if args.mock else "webcam"
     initial_index = args.camera
@@ -136,7 +156,7 @@ def main():
     # Menghubungkan tombol tutup panel kontrol untuk keluar dari seluruh aplikasi
     panel.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, True)
     
-    # Overlay coretan di layar dimulai dalam keadaan tersembunyi (hidden) secara default
+    # Overlay & toolbar dimulai dalam keadaan tersembunyi (hidden) secara default
     
     # Run loop
     exit_code = app.exec()

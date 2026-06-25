@@ -2,6 +2,8 @@ import pytest
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QColor
 from muf_studio.screen_brush import ScreenBrushOverlay
+from muf_studio.annotation_toolbar import AnnotationToolbarWindow
+
 
 def test_screen_brush_initialization(qtbot):
     """Menguji inisialisasi ScreenBrushOverlay dengan flags dan attributes yang benar."""
@@ -21,6 +23,10 @@ def test_screen_brush_initialization(qtbot):
     assert overlay.current_color == QColor("#ff007f") # Default neon pink/red
     assert overlay.current_width == 4
 
+    # Periksa bahwa toolbar default None (belum di-inject)
+    assert overlay.toolbar is None
+
+
 def test_screen_brush_toggle_drawing(qtbot):
     """Menguji toggle status menggambar pada overlay (show/hide)."""
     overlay = ScreenBrushOverlay()
@@ -35,6 +41,29 @@ def test_screen_brush_toggle_drawing(qtbot):
     overlay.set_drawing_enabled(False)
     qtbot.wait(100)
     assert overlay.isVisible() is False
+
+
+def test_screen_brush_toggle_drawing_with_toolbar(qtbot):
+    """Menguji toggle drawing juga mengontrol toolbar terpisah."""
+    overlay = ScreenBrushOverlay()
+    toolbar = AnnotationToolbarWindow()
+    overlay.set_toolbar(toolbar)
+
+    qtbot.addWidget(overlay)
+    qtbot.addWidget(toolbar)
+
+    # Aktifkan drawing -> toolbar harus visible
+    overlay.set_drawing_enabled(True)
+    qtbot.wait(100)
+    assert overlay.isVisible() is True
+    assert toolbar.isVisible() is True
+
+    # Matikan drawing -> toolbar harus hidden
+    overlay.set_drawing_enabled(False)
+    qtbot.wait(100)
+    assert overlay.isVisible() is False
+    assert toolbar.isVisible() is False
+
 
 def test_screen_brush_stroke_management(qtbot):
     """Menguji penambahan stroke, fungsi undo, dan clear."""
@@ -71,6 +100,7 @@ def test_screen_brush_stroke_management(qtbot):
     overlay.clear_all()
     assert len(overlay.strokes) == 0
 
+
 def test_screen_brush_pen_settings(qtbot):
     """Menguji pengaturan warna dan ukuran pen."""
     overlay = ScreenBrushOverlay()
@@ -83,6 +113,7 @@ def test_screen_brush_pen_settings(qtbot):
     # Ubah ketebalan pen
     overlay.set_pen_width(8)
     assert overlay.current_width == 8
+
 
 def test_screen_brush_tool_mode(qtbot):
     """Menguji pengaturan mode tool (pen/text)."""
@@ -99,6 +130,23 @@ def test_screen_brush_tool_mode(qtbot):
     # Set kembali ke "pen"
     overlay.set_tool_mode("pen")
     assert overlay.tool_mode == "pen"
+
+
+def test_screen_brush_tool_mode_syncs_toolbar(qtbot):
+    """Menguji bahwa set_tool_mode() juga sinkronkan toolbar terpisah."""
+    overlay = ScreenBrushOverlay()
+    toolbar = AnnotationToolbarWindow()
+    overlay.set_toolbar(toolbar)
+
+    qtbot.addWidget(overlay)
+    qtbot.addWidget(toolbar)
+
+    overlay.set_tool_mode("text")
+    assert toolbar.tb_text.isChecked() is True
+
+    overlay.set_tool_mode("pen")
+    assert toolbar.tb_pen.isChecked() is True
+
 
 def test_screen_brush_text_annotation(qtbot):
     """Menguji pembuatan anotasi teks ketika klik mouse pada mode text."""
@@ -142,6 +190,7 @@ def test_screen_brush_text_annotation(qtbot):
     assert stroke.get("text") == "Halo Mas Mufid"
     assert stroke.get("point") == QPoint(200, 200)
 
+
 def test_screen_brush_text_undo_clear(qtbot):
     """Menguji fungsionalitas undo dan clear pada coretan & teks."""
     overlay = ScreenBrushOverlay()
@@ -178,6 +227,7 @@ def test_screen_brush_text_undo_clear(qtbot):
     overlay.clear_all()
     assert len(overlay.strokes) == 0
 
+
 def test_screen_brush_multimonitor_geometry(qtbot, monkeypatch):
     """Menguji bahwa overlay memosisikan dirinya pada screen tempat kursor berada."""
     from PyQt6.QtGui import QGuiApplication
@@ -202,52 +252,125 @@ def test_screen_brush_multimonitor_geometry(qtbot, monkeypatch):
     # Verifikasi geometry overlay sesuai dengan mock screen
     assert overlay.geometry() == QRect(100, 200, 1024, 768)
 
-def test_screen_brush_toolbar_initialization(qtbot):
-    """Menguji inisialisasi toolbar pada ScreenBrushOverlay."""
-    overlay = ScreenBrushOverlay()
-    qtbot.addWidget(overlay)
-    
-    assert hasattr(overlay, "toolbar")
-    assert overlay.toolbar is not None
-    # Defaultnya harus tersembunyi
-    assert overlay.toolbar.isHidden()
-    
-    # Tampilkan overlay
-    overlay.set_drawing_enabled(True)
-    assert overlay.toolbar.isVisible()
 
-def test_screen_brush_toolbar_clicks(qtbot):
-    """Menguji bahwa klik pada tombol toolbar mengubah state overlay dengan benar."""
-    from PyQt6.QtWidgets import QPushButton
+# --- Test untuk AnnotationToolbarWindow (terpisah) ---
+
+def test_annotation_toolbar_initialization(qtbot):
+    """Menguji inisialisasi AnnotationToolbarWindow sebagai top-level window."""
+    toolbar = AnnotationToolbarWindow()
+    qtbot.addWidget(toolbar)
     
-    overlay = ScreenBrushOverlay()
-    qtbot.addWidget(overlay)
-    
-    # Aktifkan drawing mode agar toolbar muncul
-    overlay.set_drawing_enabled(True)
-    
-    # Cari tombol text di toolbar
-    text_btn = None
-    for child in overlay.toolbar.findChildren(QPushButton):
-        if "Text" in child.text() or "🔤" in child.text():
-            text_btn = child
-            break
-            
-    assert text_btn is not None
-    qtbot.mouseClick(text_btn, Qt.MouseButton.LeftButton)
-    assert overlay.tool_mode == "text"
-    
-    # Cari tombol Close / Stop
-    stop_btn = None
-    for child in overlay.toolbar.findChildren(QPushButton):
-        if "Close" in child.text() or "❌" in child.text():
-            stop_btn = child
-            break
-            
-    assert stop_btn is not None
-    qtbot.mouseClick(stop_btn, Qt.MouseButton.LeftButton)
-    # Harus menonaktifkan drawing mode
-    assert overlay._is_drawing_enabled is False
-    assert overlay.isHidden() is True
+    # Periksa bahwa toolbar adalah top-level window (bukan child)
+    assert toolbar.parent() is None
+
+    # Periksa Window Flags
+    flags = toolbar.windowFlags()
+    assert bool(flags & Qt.WindowType.FramelessWindowHint)
+    assert bool(flags & Qt.WindowType.WindowStaysOnTopHint)
+    assert bool(flags & Qt.WindowType.Tool)
+
+    # Periksa bahwa tombol-tombol ada
+    assert toolbar.tb_pen is not None
+    assert toolbar.tb_text is not None
+    assert toolbar.tb_close is not None
+    assert toolbar.tb_undo is not None
+    assert toolbar.tb_clear is not None
+    assert len(toolbar.tb_color_buttons) == 5
+
+    # Defaultnya harus tersembunyi
+    assert toolbar.isHidden()
+
+
+def test_annotation_toolbar_close_signal(qtbot):
+    """Menguji bahwa klik tombol Close mengirim sinyal close_requested."""
+    toolbar = AnnotationToolbarWindow()
+    qtbot.addWidget(toolbar)
+    toolbar.show()
+
+    signals = []
+    toolbar.close_requested.connect(lambda: signals.append(True))
+
+    qtbot.mouseClick(toolbar.tb_close, Qt.MouseButton.LeftButton)
+    assert len(signals) == 1
+
+
+def test_annotation_toolbar_tool_signal(qtbot):
+    """Menguji bahwa klik tombol tool mengirim sinyal tool_changed."""
+    toolbar = AnnotationToolbarWindow()
+    qtbot.addWidget(toolbar)
+    toolbar.show()
+
+    signals = []
+    toolbar.tool_changed.connect(signals.append)
+
+    # Klik Text
+    qtbot.mouseClick(toolbar.tb_text, Qt.MouseButton.LeftButton)
+    assert len(signals) == 1
+    assert signals[0] == "text"
+
+    # Klik Pen
+    qtbot.mouseClick(toolbar.tb_pen, Qt.MouseButton.LeftButton)
+    assert len(signals) == 2
+    assert signals[1] == "pen"
+
+
+def test_annotation_toolbar_color_signal(qtbot):
+    """Menguji bahwa klik tombol warna mengirim sinyal color_changed."""
+    toolbar = AnnotationToolbarWindow()
+    qtbot.addWidget(toolbar)
+    toolbar.show()
+
+    signals = []
+    toolbar.color_changed.connect(signals.append)
+
+    # Klik warna Neon Cyan (indeks 1)
+    qtbot.mouseClick(toolbar.tb_color_buttons[1], Qt.MouseButton.LeftButton)
+    assert len(signals) == 1
+    assert signals[0] == QColor("#00f2fe")
+
+
+def test_annotation_toolbar_undo_clear_signals(qtbot):
+    """Menguji bahwa klik Undo dan Clear mengirim sinyal yang tepat."""
+    toolbar = AnnotationToolbarWindow()
+    qtbot.addWidget(toolbar)
+    toolbar.show()
+
+    undo_signals = []
+    clear_signals = []
+    toolbar.undo_requested.connect(lambda: undo_signals.append(True))
+    toolbar.clear_requested.connect(lambda: clear_signals.append(True))
+
+    qtbot.mouseClick(toolbar.tb_undo, Qt.MouseButton.LeftButton)
+    assert len(undo_signals) == 1
+
+    qtbot.mouseClick(toolbar.tb_clear, Qt.MouseButton.LeftButton)
+    assert len(clear_signals) == 1
+
+
+def test_annotation_toolbar_set_tool_mode(qtbot):
+    """Menguji setter sinkronisasi tool mode pada toolbar."""
+    toolbar = AnnotationToolbarWindow()
+    qtbot.addWidget(toolbar)
+
+    toolbar.set_tool_mode("text")
+    assert toolbar.tb_text.isChecked() is True
+    assert toolbar.tb_pen.isChecked() is False
+
+    toolbar.set_tool_mode("pen")
+    assert toolbar.tb_pen.isChecked() is True
+    assert toolbar.tb_text.isChecked() is False
+
+
+def test_annotation_toolbar_set_active_color(qtbot):
+    """Menguji setter sinkronisasi warna aktif pada toolbar."""
+    toolbar = AnnotationToolbarWindow()
+    qtbot.addWidget(toolbar)
+
+    # Set warna ke Neon Cyan
+    toolbar.set_active_color(QColor("#00f2fe"))
+    # Cek bahwa tombol Neon Cyan memiliki border putih (aktif)
+    cyan_btn = toolbar.tb_color_buttons[1]
+    style = cyan_btn.styleSheet()
+    assert "border: 2px solid #ffffff;" in style
 
 
