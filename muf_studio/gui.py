@@ -117,8 +117,8 @@ class FloatingWebcamWidget(QWidget):
         # Nonaktifkan clipping untuk menggambar border luar agar halus
         painter.setClipping(False)
         
-        # Menggambar Border Neon Tipis (Neon Cyan dengan opacity)
-        border_pen = QPen(QColor(0, 242, 254, 180), 2)
+        # Menggambar Border Tipis (Putih dengan opacity)
+        border_pen = QPen(QColor(255, 255, 255, 200), 2)
         painter.setPen(border_pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRoundedRect(self.rect().adjusted(1, 1, -1, -1).toRectF(), 24.0, 24.0)
