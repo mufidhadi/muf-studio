@@ -7,7 +7,7 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
 ## 1. Detail Informasi Tugas
 *   **Nama Tugas:** Penambahan Fitur Coretan & Tulisan di Layar (Screen Annotation)
 *   **Nama Branch:** `feature/screen-annotation-text`
-*   **Nomor Hash Commit:** `fecc43c4257d6815cb60da25e264b181b355ada0`
+*   **Nomor Hash Commit:** `c29178966ee8cda15a7423bfbb7f1d0a27375257`
 *   **Nama & URL Repo:** mufidhadi/muf-studio (https://github.com/mufidhadi/muf-studio)
 *   **Tech Stack:**
     *   Python (CPython >= 3.12)
@@ -55,6 +55,8 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
         *   **Saat menggambar aktif:** Overlay window ditampilkan menggunakan `self.show()`, `self.raise_()`, dan `self.activateWindow()`. Window menutupi layar secara visual, berada paling depan, dan menangkap semua klik mouse (tanpa flag click-through) sehingga coretan/tulisan dapat dibuat dan kursor crosshair (✏️) bekerja sempurna.
         *   **Saat menggambar nonaktif:** Overlay window langsung disembunyikan menggunakan `self.hide()`. Karena window disembunyikan, input mouse otomatis jatuh 100% ke desktop/aplikasi di bawahnya tanpa hambatan.
         *   **Penyimpanan State:** Seluruh coretan dan tulisan tetap disimpan di memory (`self.strokes`). Saat overlay ditampilkan kembali (`show()`), seluruh coretan langsung dirender ulang secara instan oleh `paintEvent`. Model ini 100% stabil di Windows, bebas dari lag handle re-creation, dan sangat andal.
+*   **Tantangan Hit-Test Pixel Transparan pada Windows:** Pada Windows OS, jika suatu window diatur memiliki transparansi background (`WA_TranslucentBackground`) dan digambar sepenuhnya transparan (`alpha = 0` / kosong), Windows OS (lewat DWM) secara otomatis menganggap area tersebut sebagai "lubang" (*hole*) dan melempar seluruh aksi mouse (click/hover/drag) secara fisik ke aplikasi di bawahnya. Hal ini menyebabkan kursor tidak berubah dan klik tidak terdeteksi.
+    *   *Solusi:* Di awal `paintEvent`, kita menggambar background penutup berupa warna hitam yang super transparan (`QColor(0, 0, 0, 1)` / alpha = 1). Opacity `1/255` ini secara visual 100% tidak terlihat oleh mata manusia (layar tetap terlihat transparan sempurna), namun DWM Windows akan mendeteksinya sebagai pixel terisi sehingga hit-test mouse berhasil tertangkap, mengubah kursor ke crosshair secara instan, dan meregistrasikan klik mouse untuk menggambar coretan/teks.
 
 ---
 

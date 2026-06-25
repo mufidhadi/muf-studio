@@ -210,6 +210,11 @@ class ScreenBrushOverlay(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
+        # Isi background dengan warna hitam super transparan (alpha = 1)
+        # agar Windows OS menangkap input mouse dan tidak membiarkannya tembus klik.
+        # Opacity 1/255 secara visual 100% tidak terlihat oleh mata manusia.
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 1))
+        
         # Gambar semua coretan yang tersimpan
         for stroke in self.strokes:
             stroke_type = stroke.get("type", "path")
