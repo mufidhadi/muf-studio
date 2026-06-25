@@ -7,7 +7,7 @@ Laporan ini mendokumentasikan pengerjaan pembuatan aplikasi Window GUI Webcam Me
 ## 1. Detail Informasi Tugas
 *   **Nama Tugas:** Pembuatan Window GUI Floating Webcam
 *   **Nama Branch:** `main`
-*   **Nomor Hash Commit:** `5abcb7f9e74dd43a18d656b84c3479b734779804`
+*   **Nomor Hash Commit:** `5b2901f6e413751d9ecfc73718ee7a0b00698eb7`
 *   **Nama & URL Repo:** mufidhadi/muf-studio (https://github.com/mufidhadi/muf-studio)
 *   **Tech Stack:**
     *   Python (CPython >= 3.12)
@@ -42,7 +42,13 @@ Laporan ini mendokumentasikan pengerjaan pembuatan aplikasi Window GUI Webcam Me
     *   Menambahkan test case `test_gui_drag_resize` untuk memverifikasi drag resize pada pojok kanan bawah.
     *   Mengimplementasikan penanganan mouse hover (merubah kursor ke diagonal grip) dan penyeretan (*drag-to-resize*) pada pojok kanan bawah window.
     *   Menambahkan dekorasi visual berupa 3 baris grip diagonal di pojok kanan bawah agar pengguna mengenali area *resize*.
-11. **Dokumentasi & Commit:** Menyimpan perubahan kode ke Git dan membuat laporan akhir ini.
+11. **Implementasi Panel Kontrol Utama (`control_panel.py` & `test_control_panel.py`):**
+    *   Membuat branch `feature/control-panel`.
+    *   Menulis test suite terpisah `tests/test_control_panel.py` untuk menguji fungsionalitas panel kontrol.
+    *   Membuat widget control panel `ControlPanelWindow` berisi slider Opacity, Size, checkbox Mirror Mode, combobox Camera Source, tombol Pause/Resume, dan tombol Hide/Show Floating Window.
+    *   Mengimplementasikan uji integrasi `tests/test_integration.py` untuk memverifikasi sinkronisasi bi-directional (dua arah) antara widget webcam dan panel kontrol.
+    *   Memperbarui `main.py` untuk mengoordinasikan sinyal-sinyal multi-window secara dinamis, menyelaraskan status awal, dan menempatkan kedua window berdampingan secara visual di pojok kanan layar.
+12. **Dokumentasi & Commit:** Menyimpan perubahan kode ke Git dan membuat laporan akhir ini.
 
 ---
 
