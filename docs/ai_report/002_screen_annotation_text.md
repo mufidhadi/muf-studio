@@ -7,7 +7,7 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
 ## 1. Detail Informasi Tugas
 *   **Nama Tugas:** Penambahan Fitur Coretan & Tulisan di Layar (Screen Annotation)
 *   **Nama Branch:** `feature/screen-annotation-text`
-*   **Nomor Hash Commit:** `9f9c5e656b4d3b4e2b667db2693f599dbb3fe84e`
+*   **Nomor Hash Commit:** `2b1dfaee3cef6e3524a48e871f1affa9ac64206c`
 *   **Nama & URL Repo:** mufidhadi/muf-studio (https://github.com/mufidhadi/muf-studio)
 *   **Tech Stack:**
     *   Python (CPython >= 3.12)
@@ -46,6 +46,8 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
     *   *Solusi:* Menggunakan `QLineEdit` borderless semi-transparan dengan border tipis bertitik (dashed line) berwarna neon seirama warna pen aktif. QLineEdit ini diposisikan tepat pada koordinat klik mouse, secara otomatis memegang fokus input, dan hancur (`WA_DeleteOnClose`) seketika input teks dikonfirmasi (melalui tombol Enter/Esc/Klik di tempat lain). Teks tersebut kemudian digambar sebagai representasi raster permanen pada `paintEvent`.
 *   **Tantangan:** Mengintegrasikan Undo dan Clear All agar bekerja untuk coretan garis dan anotasi tulisan sekaligus.
     *   *Solusi:* Menyimpan data anotasi tulisan ke dalam list data terpadu `self.strokes` dengan menambahkan metadata `"type": "text"`. Hal ini membuat fungsi `undo()` dan `clear_all()` dapat mengontrol histori aksi secara linear dan seragam tanpa membutuhkan logika histori terpisah.
+*   **Bug:** Mode anotasi layar awalnya tidak merespons klik mouse sama sekali dan kursor tidak berubah (tetap tembus/click-through) meskipun mode menggambar sudah diaktifkan dari panel kontrol.
+    *   *Solusi:* Pada sistem operasi Windows, merubah atribut level widget `WA_TransparentForMouseEvents` secara dinamis pada top-level window yang sudah tampil tidak memicu Windows OS Window Manager untuk memperbarui gaya window (`WS_EX_TRANSPARENT`). Solusinya adalah dengan mengubah window flag `Qt.WindowType.WindowTransparentForInput` secara bitwise dan memanggil `self.showFullScreen()` untuk memaksa pembuatan ulang window handle di tingkat OS. Namun, agar perubahan flag tersebut tidak dibatalkan kembali oleh Qt, urutan pemanggilannya sangat penting: atribut `WA_TransparentForMouseEvents` harus diset `False` (atau `not enabled`) *terlebih dahulu* sebelum kita memodifikasi dan menetapkan `self.windowFlags()`.
 
 ---
 

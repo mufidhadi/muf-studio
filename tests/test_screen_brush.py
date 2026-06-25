@@ -28,12 +28,17 @@ def test_screen_brush_toggle_drawing(qtbot):
     qtbot.addWidget(overlay)
     
     # Aktifkan mode menggambar (WA_TransparentForMouseEvents harus bernilai False agar bisa menangkap klik mouse)
+    # Serta WindowTransparentForInput harus bernilai False agar input mouse ditangkap
     overlay.set_drawing_enabled(True)
+    qtbot.wait(100)
     assert overlay.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents) is False
+    assert not bool(overlay.windowFlags() & Qt.WindowType.WindowTransparentForInput)
     
-    # Matikan mode menggambar
+    # Matikan mode menggambar (TransparentForMouseEvents & WindowTransparentForInput harus bernilai True)
     overlay.set_drawing_enabled(False)
+    qtbot.wait(100)
     assert overlay.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents) is True
+    assert bool(overlay.windowFlags() & Qt.WindowType.WindowTransparentForInput)
 
 def test_screen_brush_stroke_management(qtbot):
     """Menguji penambahan stroke, fungsi undo, dan clear."""

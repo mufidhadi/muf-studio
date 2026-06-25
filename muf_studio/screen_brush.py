@@ -14,7 +14,8 @@ class ScreenBrushOverlay(QWidget):
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | 
             Qt.WindowType.WindowStaysOnTopHint | 
-            Qt.WindowType.Tool
+            Qt.WindowType.Tool |
+            Qt.WindowType.WindowTransparentForInput
         )
         
         # 2. Atur Transparansi Background
@@ -40,8 +41,18 @@ class ScreenBrushOverlay(QWidget):
     def set_drawing_enabled(self, enabled):
         """Mengaktifkan/menonaktifkan mode menggambar (toggles click-through)."""
         self._is_drawing_enabled = enabled
-        # Jika mode menggambar aktif, nonaktifkan click-through agar bisa menangkap mouse
+        
+        # 1. Atur WA_TransparentForMouseEvents secara dinamis pada level widget TERLEBIH DAHULU
+        # agar Qt tidak memaksakan WindowTransparentForInput kembali
         self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, not enabled)
+        
+        # 2. Atur WindowTransparentForInput secara dinamis pada level window menggunakan bitwise
+        flags = self.windowFlags()
+        if enabled:
+            flags &= ~Qt.WindowType.WindowTransparentForInput
+        else:
+            flags |= Qt.WindowType.WindowTransparentForInput
+        self.setWindowFlags(flags)
         
         if enabled:
             # Ubah kursor menjadi crosshair untuk menandakan mode corat-coret
@@ -53,6 +64,8 @@ class ScreenBrushOverlay(QWidget):
             if self.text_editor is not None:
                 self.text_editor.editingFinished.emit()
             
+        # 3. Re-apply flags dan buat ulang handle window di OS agar click-through ter-update secara realtime
+        self.showFullScreen()
         self.update()
 
     def set_tool_mode(self, mode):
