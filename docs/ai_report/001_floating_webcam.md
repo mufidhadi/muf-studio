@@ -8,7 +8,7 @@ Laporan ini mendokumentasikan pengerjaan pembuatan aplikasi Window GUI Webcam Me
 *   **Nama Tugas:** Pembuatan Window GUI Floating Webcam
 *   **Nama Branch:** `feature/floating-webcam`
 *   **Nomor Hash Commit:** `5abcb7f9e74dd43a18d656b84c3479b734779804`
-*   **Nama & URL Repo:** Local Repository (`D:\project\mufid\muf_studio`)
+*   **Nama & URL Repo:** mufidhadi/muf-studio (https://github.com/mufidhadi/muf-studio)
 *   **Tech Stack:**
     *   Python (CPython >= 3.12)
     *   PyQt6 (GUI Library)
