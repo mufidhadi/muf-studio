@@ -36,6 +36,9 @@ class AnnotationToolbarWindow(QWidget):
         # Tidak menggunakan WA_TranslucentBackground pada toolbar
         # agar semua tombol bisa diklik normal di Windows
 
+        # Guard untuk mencegah re-entrant stylesheet update
+        self._updating = False
+
         self._setup_ui()
         self.hide()
 
@@ -185,9 +188,13 @@ class AnnotationToolbarWindow(QWidget):
     def _on_tool_changed(self, mode):
         """Handler internal saat tombol tool berubah."""
         self.tool_changed.emit(mode)
+        # Pastikan toolbar tetap di depan dan menerima input
+        self.raise_()
+        self.activateWindow()
 
     def _on_color_clicked(self, hex_code, clicked_button):
         """Handler internal saat tombol warna diklik."""
+        self._updating = True
         color = QColor(hex_code)
 
         # Update visual style tombol warna aktif
@@ -211,6 +218,11 @@ class AnnotationToolbarWindow(QWidget):
             """)
 
         self.color_changed.emit(color)
+        self._updating = False
+
+        # Pastikan toolbar tetap di depan dan menerima input
+        self.raise_()
+        self.activateWindow()
 
     # --- API untuk sinkronisasi dari luar ---
 
@@ -226,7 +238,10 @@ class AnnotationToolbarWindow(QWidget):
         self.tb_text.blockSignals(False)
 
     def set_active_color(self, color):
-        """Sinkronkan warna aktif dari luar (tanpa emit sinyal)."""
+        """Sinkronkan warna aktif dari luar (tanpa emit sinyal).
+        Skip jika toolbar sedang memproses klik sendiri (mencegah double update)."""
+        if self._updating:
+            return
         hex_code = color.name()
         for btn in self.tb_color_buttons:
             h = btn.property("color_hex")
