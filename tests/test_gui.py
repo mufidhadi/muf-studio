@@ -1,5 +1,5 @@
 import pytest
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QPoint
 from muf_studio.gui import FloatingWebcamWidget
 from muf_studio.camera import MockCameraService
 
@@ -58,3 +58,29 @@ def test_gui_opacity_change(qtbot):
     # Ubah opacity
     widget.set_window_opacity(0.8)
     assert widget.windowOpacity() == pytest.approx(0.8)
+
+def test_gui_drag_resize(qtbot):
+    """Menguji bahwa menarik pojok kanan bawah dapat memperbesar window secara persegi."""
+    widget = FloatingWebcamWidget()
+    widget.show()
+    qtbot.addWidget(widget)
+    
+    initial_size = widget.width()
+    
+    # Simulasikan gerakan mouse ke pojok kanan bawah
+    corner = widget.rect().bottomRight() - QPoint(5, 5)
+    
+    # Tekan mouse kiri di pojok
+    qtbot.mousePress(widget, Qt.MouseButton.LeftButton, pos=corner)
+    
+    # Geser mouse ke posisi baru (menambah ukuran)
+    new_pos = corner + QPoint(50, 50)
+    qtbot.mouseMove(widget, pos=new_pos)
+    
+    # Lepas mouse
+    qtbot.mouseRelease(widget, Qt.MouseButton.LeftButton, pos=new_pos)
+    
+    # Verifikasi ukuran bertambah dan tetap berbentuk persegi
+    assert widget.width() > initial_size
+    assert widget.width() == widget.height()
+

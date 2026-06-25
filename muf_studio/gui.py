@@ -30,6 +30,11 @@ class FloatingWebcamWidget(QWidget):
         self.current_frame = None
         self.drag_position = QPoint()
         
+        # Mouse Tracking & Resize Configuration
+        self.setMouseTracking(True)
+        self.is_resizing_mode = False
+        self.resize_margin = 16
+        
         # 4. Callback untuk switch source kamera
         self.on_camera_source_changed = None
         
@@ -122,20 +127,59 @@ class FloatingWebcamWidget(QWidget):
         painter.setPen(border_pen)
         painter.setBrush(Qt.BrushStyle.NoBrush)
         painter.drawRoundedRect(self.rect().adjusted(1, 1, -1, -1).toRectF(), 24.0, 24.0)
+        
+        # Menggambar visual indicator (resize grip) diagonal di pojok kanan bawah
+        grip_pen = QPen(QColor(255, 255, 255, 120), 1.5)
+        painter.setPen(grip_pen)
+        w, h = self.width(), self.height()
+        painter.drawLine(w - 14, h - 6, w - 6, h - 14)
+        painter.drawLine(w - 10, h - 6, w - 6, h - 10)
+        painter.drawLine(w - 6, h - 6, w - 6, h - 6)
 
-    # --- Mouse Events untuk Draggable ---
+    # --- Mouse Events untuk Draggable & Resizable ---
     
     def mousePressEvent(self, event):
         if event.button() == Qt.MouseButton.LeftButton:
-            # Simpan posisi offset relatif terhadap pojok kiri atas window
-            self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
+            pos = event.position().toPoint()
+            margin = self.resize_margin
+            # Cek apakah klik berada di pojok kanan bawah (resize zone)
+            if pos.x() >= self.width() - margin and pos.y() >= self.height() - margin:
+                self.is_resizing_mode = True
+            else:
+                self.is_resizing_mode = False
+                # Simpan posisi offset relatif terhadap pojok kiri atas window untuk menyeret
+                self.drag_position = event.globalPosition().toPoint() - self.frameGeometry().topLeft()
             event.accept()
 
     def mouseMoveEvent(self, event):
-        if event.buttons() == Qt.MouseButton.LeftButton:
-            # Pindahkan window berdasarkan gerakan mouse global
-            self.move(event.globalPosition().toPoint() - self.drag_position)
+        pos = event.position().toPoint()
+        margin = self.resize_margin
+        
+        # Hover check untuk mengubah cursor shape ketika berada di resize zone
+        if not event.buttons():
+            if pos.x() >= self.width() - margin and pos.y() >= self.height() - margin:
+                self.setCursor(Qt.CursorShape.SizeFDiagCursor)
+            else:
+                self.setCursor(Qt.CursorShape.ArrowCursor)
             event.accept()
+            return
+            
+        if event.buttons() == Qt.MouseButton.LeftButton:
+            if self.is_resizing_mode:
+                # Enforce square aspect ratio by taking the maximum of x and y
+                new_size = max(pos.x(), pos.y())
+                # Bound size
+                new_size = max(self.minimumWidth(), min(self.maximumWidth(), new_size))
+                self.resize(new_size, new_size)
+            else:
+                # Pindahkan window berdasarkan gerakan mouse global
+                self.move(event.globalPosition().toPoint() - self.drag_position)
+            event.accept()
+
+    def mouseReleaseEvent(self, event):
+        self.is_resizing_mode = False
+        self.setCursor(Qt.CursorShape.ArrowCursor)
+        event.accept()
 
     # --- Mouse Wheel Event untuk Resize (Scalable) ---
     
