@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, QPoint
 from PyQt6.QtGui import QPainter, QColor, QPen, QFont
-from PyQt6.QtWidgets import QWidget, QLineEdit
+from PyQt6.QtWidgets import QWidget, QLineEdit, QApplication
 
 class ScreenBrushOverlay(QWidget):
     """
@@ -17,13 +17,20 @@ class ScreenBrushOverlay(QWidget):
             Qt.WindowType.Tool
         )
         
-        # 2. Atur Transparansi Background
+        # 2. Atur Transparansi Background secara eksplisit
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        self.setStyleSheet("background: transparent;")
         
-        # 3. Mode Menggambar nonaktif secara default pada startup (Window disembunyikan)
+        # 3. Posisikan menutupi seluruh screen primer sejak awal
+        # Menggunakan geometry manual alih-alih showFullScreen() yang eksklusif
+        # agar DWM Windows tetap mengaktifkan composition/transparansi.
+        screen = QApplication.primaryScreen().geometry()
+        self.setGeometry(screen)
+        
+        # 4. Mode Menggambar nonaktif secara default pada startup (Window disembunyikan)
         self.hide()
         
-        # 4. State Internal Menggambar
+        # 5. State Internal Menggambar
         self.strokes = []  # List dari dict: {"points": [QPoint], "color": QColor, "width": int}
         self.current_color = QColor("#ff007f")  # Default Neon Pink/Red
         self.current_width = 4
@@ -39,8 +46,12 @@ class ScreenBrushOverlay(QWidget):
         self._is_drawing_enabled = enabled
         
         if enabled:
-            # Tampilkan overlay secara fullscreen, bawa ke depan, dan aktifkan
-            self.showFullScreen()
+            # Posisikan menutupi seluruh screen primer sebelum ditampilkan
+            screen = QApplication.primaryScreen().geometry()
+            self.setGeometry(screen)
+            
+            # Tampilkan overlay, bawa ke depan, dan aktifkan fokus
+            self.show()
             self.raise_()
             self.activateWindow()
             

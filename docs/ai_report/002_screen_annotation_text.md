@@ -7,7 +7,7 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
 ## 1. Detail Informasi Tugas
 *   **Nama Tugas:** Penambahan Fitur Coretan & Tulisan di Layar (Screen Annotation)
 *   **Nama Branch:** `feature/screen-annotation-text`
-*   **Nomor Hash Commit:** `08587264297d149539e29494d8d95ebcdc63bf93`
+*   **Nomor Hash Commit:** `fecc43c4257d6815cb60da25e264b181b355ada0`
 *   **Nama & URL Repo:** mufidhadi/muf-studio (https://github.com/mufidhadi/muf-studio)
 *   **Tech Stack:**
     *   Python (CPython >= 3.12)
@@ -46,11 +46,15 @@ Laporan ini mendokumentasikan pengerjaan pembuatan fitur baru berupa alat untuk 
     *   *Solusi:* Menggunakan `QLineEdit` borderless semi-transparan dengan border tipis bertitik (dashed line) berwarna neon seirama warna pen aktif. QLineEdit ini diposisikan tepat pada koordinat klik mouse, secara otomatis memegang fokus input, dan hancur (`WA_DeleteOnClose`) seketika input teks dikonfirmasi (melalui tombol Enter/Esc/Klik di tempat lain). Teks tersebut kemudian digambar sebagai representasi raster permanen pada `paintEvent`.
 *   **Tantangan:** Mengintegrasikan Undo dan Clear All agar bekerja untuk coretan garis dan anotasi tulisan sekaligus.
     *   *Solusi:* Menyimpan data anotasi tulisan ke dalam list data terpadu `self.strokes` dengan menambahkan metadata `"type": "text"`. Hal ini membuat fungsi `undo()` dan `clear_all()` dapat mengontrol histori aksi secara linear dan seragam tanpa membutuhkan logika histori terpisah.
-*   **Bug & Solusi Desain:** Mode anotasi layar awalnya tidak merespons klik mouse (stuck click-through) karena mengubah status click-through secara dinamis (`WA_TransparentForMouseEvents` dan `WindowTransparentForInput`) pada top-level fullscreen window yang sudah ditampilkan sangat tidak stabil di OS Windows.
-    *   *Solusi Akhir (Arsitektur Show/Hide Dinamis):* Alih-alih memanipulasi flag transparansi input OS secara dinamis pada window yang terus aktif, solusinya adalah menggunakan **model overlay show/hide dinamis**:
-        *   **Saat menggambar aktif:** Overlay window dipanggil menggunakan `self.showFullScreen()`, `self.raise_()`, dan `self.activateWindow()`. Window ini aktif, berada paling depan, dan menangkap semua klik mouse (tanpa flag click-through) sehingga coretan/tulisan dapat dibuat.
+*   **Bug & Solusi Desain:** Mode anotasi layar awalnya tidak merespons klik mouse (stuck click-through) dan kursor tidak berubah karena mengubah status click-through secara dinamis (`WA_TransparentForMouseEvents` dan `WindowTransparentForInput`) pada top-level window sangat tidak stabil di OS Windows.
+    *   **Tantangan Eksklusif Fullscreen Windows:** Pada Windows OS, memanggil `showFullScreen()` pada window translucent akan memaksa DWM (Desktop Window Manager) melewati composition untuk window tersebut demi performa (menjadikannya "exclusive fullscreen"). Akibat dari bypass composition ini adalah:
+        1. Fitur transparansi/translucency dinonaktifkan secara paksa oleh OS, membuat window menjadi hitam atau tidak digambar sama sekali.
+        2. Window manager Windows memblokir input focus karena window bertindak sebagai aplikasi eksklusif, sehingga kursor tidak berubah dan klik mouse tidak masuk ke Qt overlay.
+    *   **Solusi Akhir (Arsitektur Overlay Geometri Desktop + Show/Hide Dinamis):**
+        *   **Mengganti `showFullScreen()` dengan Geometry Manual:** Alih-alih memanggil `showFullScreen()`, kita menggunakan window frameless biasa (`FramelessWindowHint | WindowStaysOnTopHint | Tool`) yang geometrinya secara manual diatur agar menutupi seluruh layar utama via `self.setGeometry(QApplication.primaryScreen().geometry())`, kemudian ditampilkan menggunakan `self.show()`. Hal ini menjaga DWM Windows composition tetap aktif sehingga transparansi tetap 100% bekerja.
+        *   **Saat menggambar aktif:** Overlay window ditampilkan menggunakan `self.show()`, `self.raise_()`, dan `self.activateWindow()`. Window menutupi layar secara visual, berada paling depan, dan menangkap semua klik mouse (tanpa flag click-through) sehingga coretan/tulisan dapat dibuat dan kursor crosshair (✏️) bekerja sempurna.
         *   **Saat menggambar nonaktif:** Overlay window langsung disembunyikan menggunakan `self.hide()`. Karena window disembunyikan, input mouse otomatis jatuh 100% ke desktop/aplikasi di bawahnya tanpa hambatan.
-        *   **Penyimpanan State:** Seluruh coretan dan tulisan tetap disimpan di memory (`self.strokes`). Saat overlay ditampilkan kembali (`showFullScreen()`), seluruh coretan akan langsung dirender ulang secara instan oleh `paintEvent`. Model ini 100% stabil di Windows, bebas dari lag handle re-creation, dan sangat andal.
+        *   **Penyimpanan State:** Seluruh coretan dan tulisan tetap disimpan di memory (`self.strokes`). Saat overlay ditampilkan kembali (`show()`), seluruh coretan langsung dirender ulang secara instan oleh `paintEvent`. Model ini 100% stabil di Windows, bebas dari lag handle re-creation, dan sangat andal.
 
 ---
 
