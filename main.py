@@ -102,6 +102,7 @@ def main():
     panel.brush_color_changed.connect(brush_overlay.set_pen_color)
     panel.brush_undo_requested.connect(brush_overlay.undo)
     panel.brush_clear_requested.connect(brush_overlay.clear_all)
+    panel.brush_tool_changed.connect(brush_overlay.set_tool_mode)
 
     # 4. Inisialisasi source kamera pertama saat startup
     initial_source = "mock" if args.mock else "webcam"

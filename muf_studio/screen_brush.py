@@ -1,6 +1,6 @@
 from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QPainter, QColor, QPen
-from PyQt6.QtWidgets import QWidget
+from PyQt6.QtGui import QPainter, QColor, QPen, QFont
+from PyQt6.QtWidgets import QWidget, QLineEdit
 
 class ScreenBrushOverlay(QWidget):
     """
@@ -32,6 +32,8 @@ class ScreenBrushOverlay(QWidget):
         self.current_width = 4
         self._is_drawing_enabled = False
         self._is_drawing_active = False
+        self.tool_mode = "pen"  # "pen" atau "text"
+        self.text_editor = None
 
     # --- API Kontrol (Dipanggil dari Panel Kontrol) ---
 
@@ -48,8 +50,17 @@ class ScreenBrushOverlay(QWidget):
             # Kembalikan kursor default
             self.unsetCursor()
             self._is_drawing_active = False
+            if self.text_editor is not None:
+                self.text_editor.editingFinished.emit()
             
         self.update()
+
+    def set_tool_mode(self, mode):
+        """Mengatur mode tool aktif (pen atau text)."""
+        self.tool_mode = mode
+        # Jika ada text editor yang sedang aktif, selesaikan
+        if self.text_editor is not None:
+            self.text_editor.editingFinished.emit()
 
     def set_pen_color(self, color):
         """Mengatur warna pen saat ini."""
@@ -75,6 +86,56 @@ class ScreenBrushOverlay(QWidget):
             self.strokes[-1]["points"].append(point)
             self.update()
 
+    def create_text_input(self, pos):
+        """Membuat input teks mengambang pada posisi klik."""
+        self.text_editor = QLineEdit(self)
+        self.text_editor.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        
+        # Ukuran font sebanding dengan ketebalan pen, minimal 14px
+        font_size = max(14, self.current_width * 4)
+        self.text_editor.setFont(QFont("Outfit", font_size))
+        
+        # Style premium: semi-transparan, border tipis neon
+        color_hex = self.current_color.name()
+        self.text_editor.setStyleSheet(f"""
+            QLineEdit {{
+                background-color: rgba(15, 15, 21, 0.85);
+                color: {color_hex};
+                border: 1px dashed {color_hex};
+                border-radius: 4px;
+                padding: 4px;
+            }}
+        """)
+        
+        # Posisikan editor dan fokus
+        self.text_editor.move(pos)
+        self.text_editor.resize(250, font_size + 16)
+        
+        # Hubungkan signal saat selesai menulis (tekan enter atau hilangnya fokus)
+        self.text_editor.editingFinished.connect(lambda p=pos, fs=font_size: self._on_text_editing_finished(p, fs))
+        self.text_editor.show()
+        self.text_editor.setFocus()
+
+    def _on_text_editing_finished(self, pos, font_size):
+        if self.text_editor is None:
+            return
+            
+        text = self.text_editor.text().strip()
+        if text:
+            # Simpan tipe anotasi sebagai teks
+            self.strokes.append({
+                "type": "text",
+                "text": text,
+                "point": pos,
+                "color": self.current_color,
+                "size": font_size
+            })
+            
+        editor = self.text_editor
+        self.text_editor = None
+        editor.close()
+        self.update()
+
     def undo(self):
         """Membatalkan coretan terakhir (Undo)."""
         if self.strokes:
@@ -84,6 +145,9 @@ class ScreenBrushOverlay(QWidget):
     def clear_all(self):
         """Menghapus semua coretan dari layar."""
         self.strokes.clear()
+        if self.text_editor is not None:
+            self.text_editor.close()
+            self.text_editor = None
         self.update()
 
     # --- Mouse Events untuk Menggambar ---
@@ -94,17 +158,27 @@ class ScreenBrushOverlay(QWidget):
             return
             
         if event.button() == Qt.MouseButton.LeftButton:
-            self._is_drawing_active = True
-            # Simpan posisi klik awal
-            self.start_stroke(event.position().toPoint())
-            event.accept()
+            if self.tool_mode == "pen":
+                self._is_drawing_active = True
+                # Simpan posisi klik awal
+                self.start_stroke(event.position().toPoint())
+                event.accept()
+            elif self.tool_mode == "text":
+                # Jika sudah ada text editor aktif, selesaikan dulu
+                if self.text_editor is not None:
+                    self.text_editor.editingFinished.emit()
+                
+                # Buat QLineEdit baru secara dinamis pada posisi klik
+                pos = event.position().toPoint()
+                self.create_text_input(pos)
+                event.accept()
 
     def mouseMoveEvent(self, event):
         if not self._is_drawing_enabled or not self._is_drawing_active:
             event.ignore()
             return
             
-        if event.buttons() & Qt.MouseButton.LeftButton:
+        if self.tool_mode == "pen" and (event.buttons() & Qt.MouseButton.LeftButton):
             # Tambahkan koordinat gerakan mouse ke stroke aktif
             self.add_point_to_stroke(event.position().toPoint())
             event.accept()
@@ -122,27 +196,38 @@ class ScreenBrushOverlay(QWidget):
         
         # Gambar semua coretan yang tersimpan
         for stroke in self.strokes:
-            points = stroke["points"]
+            stroke_type = stroke.get("type", "path")
             color = stroke["color"]
-            width = stroke["width"]
             
-            if not points:
-                continue
+            if stroke_type == "text":
+                text = stroke["text"]
+                point = stroke["point"]
+                size = stroke.get("size", 16)
                 
-            # Konfigurasi Pen agar coretan terlihat halus (Round Cap & Join)
-            pen = QPen(
-                color, 
-                width, 
-                Qt.PenStyle.SolidLine, 
-                Qt.PenCapStyle.RoundLine, 
-                Qt.PenJoinStyle.RoundJoin
-            )
-            painter.setPen(pen)
-            
-            if len(points) == 1:
-                # Jika hanya 1 titik, gambar titik/lingkaran kecil
-                painter.drawPoint(points[0])
+                painter.setFont(QFont("Outfit", size))
+                painter.setPen(color)
+                painter.drawText(point, text)
             else:
-                # Hubungkan titik-titik membentuk garis kontinu yang halus
-                for i in range(len(points) - 1):
-                    painter.drawLine(points[i], points[i+1])
+                points = stroke["points"]
+                width = stroke["width"]
+                
+                if not points:
+                    continue
+                    
+                # Konfigurasi Pen agar coretan terlihat halus (Round Cap & Join)
+                pen = QPen(
+                    color, 
+                    width, 
+                    Qt.PenStyle.SolidLine, 
+                    Qt.PenCapStyle.RoundLine, 
+                    Qt.PenJoinStyle.RoundJoin
+                )
+                painter.setPen(pen)
+                
+                if len(points) == 1:
+                    # Jika hanya 1 titik, gambar titik/lingkaran kecil
+                    painter.drawPoint(points[0])
+                else:
+                    # Hubungkan titik-titik membentuk garis kontinu yang halus
+                    for i in range(len(points) - 1):
+                        painter.drawLine(points[i], points[i+1])

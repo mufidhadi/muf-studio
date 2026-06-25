@@ -24,6 +24,7 @@ class ControlPanelWindow(QWidget):
     brush_width_changed = pyqtSignal(int)
     brush_undo_requested = pyqtSignal()
     brush_clear_requested = pyqtSignal()
+    brush_tool_changed = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -129,6 +130,29 @@ class ControlPanelWindow(QWidget):
         self.brush_toggle_button.setCheckable(True)
         self.brush_toggle_button.setObjectName("BrushToggleButton")
         brush_layout.addWidget(self.brush_toggle_button)
+        
+        # Pemilihan Tool: Pen vs Text
+        tool_layout = QHBoxLayout()
+        tool_layout.addWidget(QLabel("Tool:"))
+        
+        self.brush_pen_tool_button = QPushButton("✏️ Pen")
+        self.brush_pen_tool_button.setCheckable(True)
+        self.brush_pen_tool_button.setChecked(True)
+        self.brush_pen_tool_button.setObjectName("ToolPenButton")
+        
+        self.brush_text_tool_button = QPushButton("🔤 Text")
+        self.brush_text_tool_button.setCheckable(True)
+        self.brush_text_tool_button.setObjectName("ToolTextButton")
+        
+        from PyQt6.QtWidgets import QButtonGroup
+        self.tool_button_group = QButtonGroup(self)
+        self.tool_button_group.addButton(self.brush_pen_tool_button)
+        self.tool_button_group.addButton(self.brush_text_tool_button)
+        self.tool_button_group.setExclusive(True)
+        
+        tool_layout.addWidget(self.brush_pen_tool_button)
+        tool_layout.addWidget(self.brush_text_tool_button)
+        brush_layout.addLayout(tool_layout)
         
         # Ketebalan Pen Slider
         width_layout = QHBoxLayout()
@@ -322,6 +346,11 @@ class ControlPanelWindow(QWidget):
                 border-color: #ff007f;
                 background-color: #1c0f16;
             }
+            #ToolPenButton:checked, #ToolTextButton:checked {
+                background-color: #00f2fe;
+                color: #0f0f15;
+                border-color: #00f2fe;
+            }
         """)
 
     def connect_signals(self):
@@ -339,6 +368,8 @@ class ControlPanelWindow(QWidget):
         self.brush_width_slider.valueChanged.connect(self._on_brush_width_slider_changed)
         self.brush_undo_button.clicked.connect(self.brush_undo_requested.emit)
         self.brush_clear_button.clicked.connect(self.brush_clear_requested.emit)
+        self.brush_pen_tool_button.clicked.connect(lambda: self.brush_tool_changed.emit("pen"))
+        self.brush_text_tool_button.clicked.connect(lambda: self.brush_tool_changed.emit("text"))
 
     # --- Handlers Internal ---
     

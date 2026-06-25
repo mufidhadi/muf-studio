@@ -155,3 +155,24 @@ def test_control_panel_brush_clear_requested(qtbot):
     panel.brush_clear_button.click()
     assert len(signals) == 1
 
+def test_control_panel_brush_tool_selection(qtbot):
+    """Menguji emisi sinyal brush_tool_changed saat memilih tool menggambar (Pen vs Text)."""
+    panel = ControlPanelWindow()
+    qtbot.addWidget(panel)
+    
+    assert panel.brush_pen_tool_button is not None
+    assert panel.brush_text_tool_button is not None
+    
+    signals = []
+    panel.brush_tool_changed.connect(signals.append)
+    
+    # Klik tombol Text Tool secara programmatif
+    panel.brush_text_tool_button.click()
+    assert len(signals) == 1
+    assert signals[0] == "text"
+    
+    # Klik tombol Pen Tool secara programmatif
+    panel.brush_pen_tool_button.click()
+    assert len(signals) == 2
+    assert signals[1] == "pen"
+

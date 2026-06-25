@@ -109,3 +109,14 @@ def test_integration_screen_brush(qtbot):
     panel.brush_clear_button.click()
     assert len(overlay.strokes) == 0
 
+    # Hubungkan sinyal tool changed
+    panel.brush_tool_changed.connect(overlay.set_tool_mode)
+    
+    # 5. Test Tool Switching (Pen -> Text)
+    assert overlay.tool_mode == "pen"
+    panel.brush_text_tool_button.click()
+    assert overlay.tool_mode == "text"
+    
+    panel.brush_pen_tool_button.click()
+    assert overlay.tool_mode == "pen"
+
