@@ -177,3 +177,28 @@ def test_screen_brush_text_undo_clear(qtbot):
     # Clear all
     overlay.clear_all()
     assert len(overlay.strokes) == 0
+
+def test_screen_brush_multimonitor_geometry(qtbot, monkeypatch):
+    """Menguji bahwa overlay memosisikan dirinya pada screen tempat kursor berada."""
+    from PyQt6.QtGui import QGuiApplication
+    from PyQt6.QtCore import QRect
+    
+    overlay = ScreenBrushOverlay()
+    qtbot.addWidget(overlay)
+    
+    # Mock screen dengan geometry tertentu
+    class MockScreen:
+        def geometry(self):
+            return QRect(100, 200, 1024, 768)
+            
+    mock_screen = MockScreen()
+    
+    # Mock screenAt untuk mengembalikan mock screen kita
+    monkeypatch.setattr(QGuiApplication, "screenAt", lambda pos: mock_screen)
+    
+    # Aktifkan drawing mode
+    overlay.set_drawing_enabled(True)
+    
+    # Verifikasi geometry overlay sesuai dengan mock screen
+    assert overlay.geometry() == QRect(100, 200, 1024, 768)
+

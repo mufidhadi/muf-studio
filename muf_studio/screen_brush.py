@@ -1,5 +1,5 @@
 from PyQt6.QtCore import Qt, QPoint
-from PyQt6.QtGui import QPainter, QColor, QPen, QFont
+from PyQt6.QtGui import QPainter, QColor, QPen, QFont, QGuiApplication, QCursor
 from PyQt6.QtWidgets import QWidget, QLineEdit, QApplication
 
 class ScreenBrushOverlay(QWidget):
@@ -46,9 +46,11 @@ class ScreenBrushOverlay(QWidget):
         self._is_drawing_enabled = enabled
         
         if enabled:
-            # Posisikan menutupi seluruh screen primer sebelum ditampilkan
-            screen = QApplication.primaryScreen().geometry()
-            self.setGeometry(screen)
+            # Dapatkan monitor tempat mouse berada saat ini agar mendukung multi-monitor secara seamless
+            active_screen = QGuiApplication.screenAt(QCursor.pos())
+            if active_screen is None:
+                active_screen = QApplication.primaryScreen()
+            self.setGeometry(active_screen.geometry())
             
             # Tampilkan overlay, bawa ke depan, dan aktifkan fokus
             self.show()
@@ -210,10 +212,11 @@ class ScreenBrushOverlay(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         
-        # Isi background dengan warna hitam super transparan (alpha = 1)
+        # Isi background dengan warna hitam super transparan (alpha = 5)
         # agar Windows OS menangkap input mouse dan tidak membiarkannya tembus klik.
-        # Opacity 1/255 secara visual 100% tidak terlihat oleh mata manusia.
-        painter.fillRect(self.rect(), QColor(0, 0, 0, 1))
+        # Opacity 5/255 secara visual 100% tidak terlihat oleh mata manusia (sekitar 1.96%),
+        # namun sangat aman terhadap pembulatan interpolasi saat DPI scaling Windows aktif.
+        painter.fillRect(self.rect(), QColor(0, 0, 0, 5))
         
         # Gambar semua coretan yang tersimpan
         for stroke in self.strokes:
