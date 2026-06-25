@@ -24,6 +24,7 @@ class ControlPanelWindow(QWidget):
     brush_width_changed = pyqtSignal(int)
     brush_undo_requested = pyqtSignal()
     brush_clear_requested = pyqtSignal()
+    brush_tool_changed = pyqtSignal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -129,6 +130,29 @@ class ControlPanelWindow(QWidget):
         self.brush_toggle_button.setCheckable(True)
         self.brush_toggle_button.setObjectName("BrushToggleButton")
         brush_layout.addWidget(self.brush_toggle_button)
+        
+        # Pemilihan Tool: Pen vs Text
+        tool_layout = QHBoxLayout()
+        tool_layout.addWidget(QLabel("Tool:"))
+        
+        self.brush_pen_tool_button = QPushButton("✏️ Pen")
+        self.brush_pen_tool_button.setCheckable(True)
+        self.brush_pen_tool_button.setChecked(True)
+        self.brush_pen_tool_button.setObjectName("ToolPenButton")
+        
+        self.brush_text_tool_button = QPushButton("🔤 Text")
+        self.brush_text_tool_button.setCheckable(True)
+        self.brush_text_tool_button.setObjectName("ToolTextButton")
+        
+        from PyQt6.QtWidgets import QButtonGroup
+        self.tool_button_group = QButtonGroup(self)
+        self.tool_button_group.addButton(self.brush_pen_tool_button)
+        self.tool_button_group.addButton(self.brush_text_tool_button)
+        self.tool_button_group.setExclusive(True)
+        
+        tool_layout.addWidget(self.brush_pen_tool_button)
+        tool_layout.addWidget(self.brush_text_tool_button)
+        brush_layout.addLayout(tool_layout)
         
         # Ketebalan Pen Slider
         width_layout = QHBoxLayout()
@@ -322,6 +346,11 @@ class ControlPanelWindow(QWidget):
                 border-color: #ff007f;
                 background-color: #1c0f16;
             }
+            #ToolPenButton:checked, #ToolTextButton:checked {
+                background-color: #00f2fe;
+                color: #0f0f15;
+                border-color: #00f2fe;
+            }
         """)
 
     def connect_signals(self):
@@ -339,6 +368,8 @@ class ControlPanelWindow(QWidget):
         self.brush_width_slider.valueChanged.connect(self._on_brush_width_slider_changed)
         self.brush_undo_button.clicked.connect(self.brush_undo_requested.emit)
         self.brush_clear_button.clicked.connect(self.brush_clear_requested.emit)
+        self.brush_pen_tool_button.clicked.connect(lambda: self.brush_tool_changed.emit("pen"))
+        self.brush_text_tool_button.clicked.connect(lambda: self.brush_tool_changed.emit("text"))
 
     # --- Handlers Internal ---
     
@@ -440,3 +471,52 @@ class ControlPanelWindow(QWidget):
             self.visibility_button.setText("👁 Hide Floating Window")
         else:
             self.visibility_button.setText("👁 Show Floating Window")
+
+    def set_brush_enabled(self, enabled):
+        self._is_brush_enabled = enabled
+        self.brush_toggle_button.blockSignals(True)
+        self.brush_toggle_button.setChecked(enabled)
+        if enabled:
+            self.brush_toggle_button.setText("✏️ Stop Drawing")
+            self.brush_toggle_button.setProperty("active", "true")
+        else:
+            self.brush_toggle_button.setText("✏️ Start Drawing")
+            self.brush_toggle_button.setProperty("active", "false")
+        self.brush_toggle_button.style().unpolish(self.brush_toggle_button)
+        self.brush_toggle_button.style().polish(self.brush_toggle_button)
+        self.brush_toggle_button.blockSignals(False)
+
+    def set_brush_tool(self, tool_mode):
+        self.brush_pen_tool_button.blockSignals(True)
+        self.brush_text_tool_button.blockSignals(True)
+        if tool_mode == "pen":
+            self.brush_pen_tool_button.setChecked(True)
+        else:
+            self.brush_text_tool_button.setChecked(True)
+        self.brush_pen_tool_button.blockSignals(False)
+        self.brush_text_tool_button.blockSignals(False)
+
+    def set_brush_color(self, color):
+        hex_code = color.name().lower()
+        # Perbarui style untuk tombol warna yang aktif di panel
+        for btn in self.brush_color_buttons:
+            h = btn.property("color_hex")
+            is_active = (h.lower() == hex_code)
+            border_style = "border: 2px solid #ffffff;" if is_active else "border: 2px solid transparent;"
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {h};
+                    border-radius: 12px;
+                    {border_style}
+                }}
+                QPushButton:hover {{
+                    border: 2px solid #a0aec0;
+                }}
+            """)
+
+    def set_brush_width(self, value):
+        self.brush_width_slider.blockSignals(True)
+        self.brush_width_slider.setValue(value)
+        self.brush_width_val_label.setText(f"{value}px")
+        self.brush_width_slider.blockSignals(False)
+

@@ -155,3 +155,59 @@ def test_control_panel_brush_clear_requested(qtbot):
     panel.brush_clear_button.click()
     assert len(signals) == 1
 
+def test_control_panel_brush_tool_selection(qtbot):
+    """Menguji emisi sinyal brush_tool_changed saat memilih tool menggambar (Pen vs Text)."""
+    panel = ControlPanelWindow()
+    qtbot.addWidget(panel)
+    
+    assert panel.brush_pen_tool_button is not None
+    assert panel.brush_text_tool_button is not None
+    
+    signals = []
+    panel.brush_tool_changed.connect(signals.append)
+    
+    # Klik tombol Text Tool secara programmatif
+    panel.brush_text_tool_button.click()
+    assert len(signals) == 1
+    assert signals[0] == "text"
+    
+    # Klik tombol Pen Tool secara programmatif
+    panel.brush_pen_tool_button.click()
+    assert len(signals) == 2
+    assert signals[1] == "pen"
+
+def test_control_panel_brush_sync_setters(qtbot):
+    """Menguji setter sinkronisasi dua arah untuk status brush pada panel kontrol."""
+    from PyQt6.QtGui import QColor
+    
+    panel = ControlPanelWindow()
+    qtbot.addWidget(panel)
+    
+    # 1. Test set_brush_enabled
+    panel.set_brush_enabled(True)
+    assert panel.brush_toggle_button.isChecked() is True
+    assert "Stop Drawing" in panel.brush_toggle_button.text()
+    
+    panel.set_brush_enabled(False)
+    assert panel.brush_toggle_button.isChecked() is False
+    assert "Start Drawing" in panel.brush_toggle_button.text()
+    
+    # 2. Test set_brush_tool
+    panel.set_brush_tool("text")
+    assert panel.brush_text_tool_button.isChecked() is True
+    assert panel.brush_pen_tool_button.isChecked() is False
+    
+    panel.set_brush_tool("pen")
+    assert panel.brush_pen_tool_button.isChecked() is True
+    assert panel.brush_text_tool_button.isChecked() is False
+    
+    # 3. Test set_brush_width
+    panel.set_brush_width(12)
+    assert panel.brush_width_slider.value() == 12
+    assert "12px" in panel.brush_width_val_label.text()
+    
+    # 4. Test set_brush_color
+    cyan = QColor("#00f2fe")
+    panel.set_brush_color(cyan)
+
+
