@@ -29,10 +29,13 @@ class ScreenBrushOverlay(QWidget):
             Qt.WindowType.FramelessWindowHint
             | Qt.WindowType.WindowStaysOnTopHint
             | Qt.WindowType.Tool
+            | Qt.WindowType.WindowDoesNotAcceptFocus
         )
 
         # 2. Atur Transparansi Background secara eksplisit
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
+        # Mencegah overlay mencuri fokus dari toolbar saat show() dipanggil
+        self.setAttribute(Qt.WidgetAttribute.WA_ShowWithoutActivating, True)
         # PENTING: TIDAK menggunakan setStyleSheet("background: transparent;")
         # karena ini menyebar ke semua child widget dan membuat mereka
         # "tembus pandang" untuk mouse events di Windows.
@@ -73,10 +76,11 @@ class ScreenBrushOverlay(QWidget):
                 active_screen = QApplication.primaryScreen()
             self.setGeometry(active_screen.geometry())
 
-            # Tampilkan overlay, bawa ke depan, dan aktifkan fokus
+            # Tampilkan overlay dan bawa ke depan
+            # TIDAK memanggil activateWindow() karena overlay TIDAK boleh
+            # menerima fokus — fokus harus tetap di toolbar.
             self.show()
             self.raise_()
-            self.activateWindow()
 
             # Ubah kursor menjadi crosshair
             self.setCursor(Qt.CursorShape.CrossCursor)
