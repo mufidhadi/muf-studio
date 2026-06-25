@@ -189,6 +189,9 @@ def test_screen_brush_text_annotation(qtbot):
     assert stroke.get("type") == "text"
     assert stroke.get("text") == "Halo Mas Mufid"
     assert stroke.get("point") == QPoint(200, 200)
+    
+    # Setelah selesai input teks, tool_mode harus otomatis kembali ke "pen"
+    assert overlay.tool_mode == "pen"
 
 
 def test_screen_brush_text_undo_clear(qtbot):

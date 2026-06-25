@@ -198,6 +198,11 @@ class ScreenBrushOverlay(QWidget):
         editor.close()
         self.update()
 
+        # Otomatis kembali ke mode pen setelah selesai input teks
+        # agar user tidak terjebak di mode text dan bisa langsung menggambar
+        self.set_tool_mode("pen")
+        self.tool_changed.emit("pen")
+
     def undo(self):
         """Membatalkan coretan terakhir (Undo)."""
         if self.strokes:
