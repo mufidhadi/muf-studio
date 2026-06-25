@@ -150,9 +150,27 @@ class ScreenBrushOverlay(QWidget):
             self.update()
 
     def create_text_input(self, pos):
-        """Membuat input teks mengambang pada posisi klik."""
-        self.text_editor = QLineEdit(self)
-        self.text_editor.setAttribute(Qt.WidgetAttribute.WA_DeleteOnClose, True)
+        """Membuat input teks mengambang pada posisi klik.
+
+        PENTING: QLineEdit dibuat sebagai top-level popup window terpisah
+        (BUKAN child dari overlay). Ini karena overlay memiliki flag
+        WindowDoesNotAcceptFocus yang mencegah semua child widget
+        menerima keyboard focus/input.
+
+        Pendekatan ini konsisten dengan AnnotationToolbarWindow yang
+        juga merupakan top-level window terpisah.
+        """
+        # Buat QLineEdit sebagai top-level window (tanpa parent)
+        # agar bisa menerima keyboard focus secara independen
+        self.text_editor = QLineEdit()
+        self.text_editor.setWindowFlags(
+            Qt.WindowType.FramelessWindowHint
+            | Qt.WindowType.WindowStaysOnTopHint
+            | Qt.WindowType.Tool
+        )
+        self.text_editor.setAttribute(
+            Qt.WidgetAttribute.WA_DeleteOnClose, True
+        )
 
         # Ukuran font sebanding dengan ketebalan pen, minimal 14px
         font_size = max(14, self.current_width * 4)
@@ -170,8 +188,10 @@ class ScreenBrushOverlay(QWidget):
             }}
         """)
 
-        # Posisikan editor dan fokus
-        self.text_editor.move(pos)
+        # Konversi posisi lokal overlay ke koordinat global layar
+        # karena text editor sekarang top-level window terpisah
+        global_pos = self.mapToGlobal(pos)
+        self.text_editor.move(global_pos)
         self.text_editor.resize(250, font_size + 16)
 
         # Hubungkan signal saat selesai menulis
@@ -179,6 +199,7 @@ class ScreenBrushOverlay(QWidget):
             lambda p=pos, fs=font_size: self._on_text_editing_finished(p, fs)
         )
         self.text_editor.show()
+        self.text_editor.activateWindow()
         self.text_editor.setFocus()
 
     def _on_text_editing_finished(self, pos, font_size):
