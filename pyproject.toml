@@ -1,7 +1,7 @@
 [project]
 name = "muf-studio"
 version = "0.1.0"
-description = "Add your description here"
+description = "Desktop presentation studio with floating webcam, screen annotation, and control panel — built with PyQt6"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
