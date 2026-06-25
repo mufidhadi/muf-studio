@@ -7,7 +7,7 @@ Laporan ini mendokumentasikan pengerjaan pembuatan aplikasi Window GUI Webcam Me
 ## 1. Detail Informasi Tugas
 *   **Nama Tugas:** Pembuatan Window GUI Floating Webcam
 *   **Nama Branch:** `feature/floating-webcam`
-*   **Nomor Hash Commit:** `dd1412ce8bef7d7865fde8309639ee855c80d920`
+*   **Nomor Hash Commit:** `5abcb7f9e74dd43a18d656b84c3479b734779804`
 *   **Nama & URL Repo:** Local Repository (`D:\project\mufid\muf_studio`)
 *   **Tech Stack:**
     *   Python (CPython >= 3.12)
@@ -38,15 +38,21 @@ Laporan ini mendokumentasikan pengerjaan pembuatan aplikasi Window GUI Webcam Me
     *   Menyediakan menu klik kanan (context menu) bernuansa gelap premium untuk Pause, Mirror, Opacity, Switch Camera Source, dan Exit.
 8.  **Menjalankan Test Suite:** Menjalankan `uv run pytest` dan memastikan semua test suite hijau/lulus (5 passed).
 9.  **Integrasi di `main.py`:** Menghubungkan GUI dengan thread kamera dan menguji aplikasi secara langsung.
-10. **Dokumentasi & Commit:** Menyimpan perubahan kode ke Git dan membuat laporan akhir ini.
+10. **Penambahan Fitur Drag Resize (TDD):**
+    *   Menambahkan test case `test_gui_drag_resize` untuk memverifikasi drag resize pada pojok kanan bawah.
+    *   Mengimplementasikan penanganan mouse hover (merubah kursor ke diagonal grip) dan penyeretan (*drag-to-resize*) pada pojok kanan bawah window.
+    *   Menambahkan dekorasi visual berupa 3 baris grip diagonal di pojok kanan bawah agar pengguna mengenali area *resize*.
+11. **Dokumentasi & Commit:** Menyimpan perubahan kode ke Git dan membuat laporan akhir ini.
 
 ---
 
 ## 3. Kesulitan, Tantangan, Bug dan Solusi
 *   **Kesulitan:** Penggunaan QPainter dengan font tertentu di dalam thread kamera non-GUI menyebabkan crash bertuliskan `QFontDatabase: Must construct a QGuiApplication before accessing QFontDatabase`.
     *   *Solusi:* Memindahkan seluruh logika penggambaran UI Mock (teks & bentuk) ke OpenCV (`cv2.putText` dan `cv2.rectangle`) pada sisi numpy array sebelum dikonversi menjadi `QImage`. Ini menjaga thread kamera sepenuhnya terisolasi dari Qt GUI engine, terbukti 100% aman saat dijalankan di pengujian headless pytest, serta meningkatkan performa rendering.
-*   **Tantangan:** Menjaga agar rasio window tetap persegi saat di-resize menggunakan mouse scroll.
-    *   *Solusi:* Menggunakan fungsi `wheelEvent` untuk mendeteksi scroll, menambah/mengurangi dimensi secara proporsional (persegi), serta menyesuaikan posisi geometri agar pusat window tetap diam (*centered scaling*) ketika window membesar atau mengecil.
+*   **Tantangan:** Menjaga agar rasio window tetap persegi saat di-resize menggunakan mouse scroll maupun penyeretan manual.
+    *   *Solusi:* 
+        *   Untuk scroll: Menggunakan fungsi `wheelEvent` untuk mendeteksi scroll, menambah/mengurangi dimensi secara proporsional (persegi), serta menyesuaikan posisi geometri agar pusat window tetap diam (*centered scaling*).
+        *   Untuk penyeretan: Menggunakan `mousePressEvent`/`mouseMoveEvent` dengan membatasi ukuran baru mengikuti `max(x, y)` dari koordinat lokal kursor, menjaga window tetap 1:1, dan menggambarkan grip visual.
 *   **UX WebCam:** Gambar kamera biasanya terasa janggal bagi pengguna jika tidak memiliki efek cermin (*mirroring*).
     *   *Solusi:* Menambahkan mode pencerminan horizontal secara default (`frame.mirrored(True, False)`) yang bisa diaktifkan/dinonaktifkan melalui menu klik kanan.
 
