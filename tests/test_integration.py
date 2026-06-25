@@ -79,8 +79,10 @@ def test_integration_screen_brush(qtbot):
     
     # 1. Test Mode Coretan (Brush Mode)
     assert overlay._is_drawing_enabled is False
+    assert overlay.isVisible() is False
     panel.brush_toggle_button.click()
     assert overlay._is_drawing_enabled is True
+    assert overlay.isVisible() is True
     
     # 2. Test Brush Width
     panel.brush_width_slider.setValue(10)

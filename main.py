@@ -129,8 +129,7 @@ def main():
     # Menghubungkan tombol tutup panel kontrol untuk keluar dari seluruh aplikasi
     panel.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, True)
     
-    # Tampilkan overlay coretan di layar
-    brush_overlay.show()
+    # Overlay coretan di layar dimulai dalam keadaan tersembunyi (hidden) secara default
     
     # Run loop
     exit_code = app.exec()

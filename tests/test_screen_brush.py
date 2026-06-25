@@ -14,31 +14,27 @@ def test_screen_brush_initialization(qtbot):
     assert bool(flags & Qt.WindowType.WindowStaysOnTopHint)
     assert bool(flags & Qt.WindowType.Tool)
     
-    # Periksa attribute transparansi dan default click-through
+    # Periksa attribute transparansi
     assert overlay.testAttribute(Qt.WidgetAttribute.WA_TranslucentBackground)
-    assert overlay.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents) is True
     
     # Periksa default pen
     assert overlay.current_color == QColor("#ff007f") # Default neon pink/red
     assert overlay.current_width == 4
 
 def test_screen_brush_toggle_drawing(qtbot):
-    """Menguji toggle status menggambar pada overlay."""
+    """Menguji toggle status menggambar pada overlay (show/hide)."""
     overlay = ScreenBrushOverlay()
     qtbot.addWidget(overlay)
     
-    # Aktifkan mode menggambar (WA_TransparentForMouseEvents harus bernilai False agar bisa menangkap klik mouse)
-    # Serta WindowTransparentForInput harus bernilai False agar input mouse ditangkap
+    # Aktifkan mode menggambar (harus visible/show)
     overlay.set_drawing_enabled(True)
     qtbot.wait(100)
-    assert overlay.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents) is False
-    assert not bool(overlay.windowFlags() & Qt.WindowType.WindowTransparentForInput)
+    assert overlay.isVisible() is True
     
-    # Matikan mode menggambar (TransparentForMouseEvents & WindowTransparentForInput harus bernilai True)
+    # Matikan mode menggambar (harus hidden/hide)
     overlay.set_drawing_enabled(False)
     qtbot.wait(100)
-    assert overlay.testAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents) is True
-    assert bool(overlay.windowFlags() & Qt.WindowType.WindowTransparentForInput)
+    assert overlay.isVisible() is False
 
 def test_screen_brush_stroke_management(qtbot):
     """Menguji penambahan stroke, fungsi undo, dan clear."""

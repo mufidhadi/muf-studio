@@ -14,20 +14,16 @@ class ScreenBrushOverlay(QWidget):
         self.setWindowFlags(
             Qt.WindowType.FramelessWindowHint | 
             Qt.WindowType.WindowStaysOnTopHint | 
-            Qt.WindowType.Tool |
-            Qt.WindowType.WindowTransparentForInput
+            Qt.WindowType.Tool
         )
         
         # 2. Atur Transparansi Background
         self.setAttribute(Qt.WidgetAttribute.WA_TranslucentBackground, True)
         
-        # 3. Pengaturan Klik Tembus (Default: True, agar tidak memblokir desktop)
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, True)
+        # 3. Mode Menggambar nonaktif secara default pada startup (Window disembunyikan)
+        self.hide()
         
-        # 4. Tampilkan secara fullscreen
-        self.showFullScreen()
-        
-        # 5. State Internal Menggambar
+        # 4. State Internal Menggambar
         self.strokes = []  # List dari dict: {"points": [QPoint], "color": QColor, "width": int}
         self.current_color = QColor("#ff007f")  # Default Neon Pink/Red
         self.current_width = 4
@@ -39,33 +35,29 @@ class ScreenBrushOverlay(QWidget):
     # --- API Kontrol (Dipanggil dari Panel Kontrol) ---
 
     def set_drawing_enabled(self, enabled):
-        """Mengaktifkan/menonaktifkan mode menggambar (toggles click-through)."""
+        """Mengaktifkan/menonaktifkan mode menggambar (toggles visibility)."""
         self._is_drawing_enabled = enabled
         
-        # 1. Atur WA_TransparentForMouseEvents secara dinamis pada level widget TERLEBIH DAHULU
-        # agar Qt tidak memaksakan WindowTransparentForInput kembali
-        self.setAttribute(Qt.WidgetAttribute.WA_TransparentForMouseEvents, not enabled)
-        
-        # 2. Atur WindowTransparentForInput secara dinamis pada level window menggunakan bitwise
-        flags = self.windowFlags()
         if enabled:
-            flags &= ~Qt.WindowType.WindowTransparentForInput
-        else:
-            flags |= Qt.WindowType.WindowTransparentForInput
-        self.setWindowFlags(flags)
-        
-        if enabled:
+            # Tampilkan overlay secara fullscreen, bawa ke depan, dan aktifkan
+            self.showFullScreen()
+            self.raise_()
+            self.activateWindow()
+            
             # Ubah kursor menjadi crosshair untuk menandakan mode corat-coret
             self.setCursor(Qt.CursorShape.CrossCursor)
         else:
-            # Kembalikan kursor default
-            self.unsetCursor()
-            self._is_drawing_active = False
+            # Jika ada text editor aktif, selesaikan
             if self.text_editor is not None:
                 self.text_editor.editingFinished.emit()
             
-        # 3. Re-apply flags dan buat ulang handle window di OS agar click-through ter-update secara realtime
-        self.showFullScreen()
+            # Kembalikan kursor default
+            self.unsetCursor()
+            self._is_drawing_active = False
+            
+            # Sembunyikan overlay agar input mouse sepenuhnya kembali ke desktop
+            self.hide()
+            
         self.update()
 
     def set_tool_mode(self, mode):
