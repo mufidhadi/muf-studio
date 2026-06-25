@@ -471,3 +471,52 @@ class ControlPanelWindow(QWidget):
             self.visibility_button.setText("👁 Hide Floating Window")
         else:
             self.visibility_button.setText("👁 Show Floating Window")
+
+    def set_brush_enabled(self, enabled):
+        self._is_brush_enabled = enabled
+        self.brush_toggle_button.blockSignals(True)
+        self.brush_toggle_button.setChecked(enabled)
+        if enabled:
+            self.brush_toggle_button.setText("✏️ Stop Drawing")
+            self.brush_toggle_button.setProperty("active", "true")
+        else:
+            self.brush_toggle_button.setText("✏️ Start Drawing")
+            self.brush_toggle_button.setProperty("active", "false")
+        self.brush_toggle_button.style().unpolish(self.brush_toggle_button)
+        self.brush_toggle_button.style().polish(self.brush_toggle_button)
+        self.brush_toggle_button.blockSignals(False)
+
+    def set_brush_tool(self, tool_mode):
+        self.brush_pen_tool_button.blockSignals(True)
+        self.brush_text_tool_button.blockSignals(True)
+        if tool_mode == "pen":
+            self.brush_pen_tool_button.setChecked(True)
+        else:
+            self.brush_text_tool_button.setChecked(True)
+        self.brush_pen_tool_button.blockSignals(False)
+        self.brush_text_tool_button.blockSignals(False)
+
+    def set_brush_color(self, color):
+        hex_code = color.name().lower()
+        # Perbarui style untuk tombol warna yang aktif di panel
+        for btn in self.brush_color_buttons:
+            h = btn.property("color_hex")
+            is_active = (h.lower() == hex_code)
+            border_style = "border: 2px solid #ffffff;" if is_active else "border: 2px solid transparent;"
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {h};
+                    border-radius: 12px;
+                    {border_style}
+                }}
+                QPushButton:hover {{
+                    border: 2px solid #a0aec0;
+                }}
+            """)
+
+    def set_brush_width(self, value):
+        self.brush_width_slider.blockSignals(True)
+        self.brush_width_slider.setValue(value)
+        self.brush_width_val_label.setText(f"{value}px")
+        self.brush_width_slider.blockSignals(False)
+

@@ -122,3 +122,59 @@ def test_integration_screen_brush(qtbot):
     panel.brush_pen_tool_button.click()
     assert overlay.tool_mode == "pen"
 
+def test_integration_brush_bidirectional_sync(qtbot):
+    """Menguji sinkronisasi dua arah antara ControlPanelWindow dan ScreenBrushOverlay."""
+    from muf_studio.screen_brush import ScreenBrushOverlay
+    from PyQt6.QtWidgets import QPushButton
+    
+    panel = ControlPanelWindow()
+    overlay = ScreenBrushOverlay()
+    
+    qtbot.addWidget(panel)
+    qtbot.addWidget(overlay)
+    
+    # Hubungkan sinyal dua arah (seperti di main.py)
+    # Arah A: Panel Kontrol -> Overlay
+    panel.brush_mode_toggled.connect(overlay.set_drawing_enabled)
+    panel.brush_width_changed.connect(overlay.set_pen_width)
+    panel.brush_color_changed.connect(overlay.set_pen_color)
+    panel.brush_tool_changed.connect(overlay.set_tool_mode)
+    
+    # Arah B: Overlay -> Panel Kontrol
+    overlay.drawing_toggled.connect(panel.set_brush_enabled)
+    overlay.tool_changed.connect(panel.set_brush_tool)
+    overlay.color_changed.connect(panel.set_brush_color)
+    overlay.width_changed.connect(panel.set_brush_width)
+    
+    # Aktifkan drawing mode dari panel
+    panel.brush_toggle_button.click()
+    assert overlay.isVisible() is True
+    assert overlay.toolbar.isVisible() is True
+    
+    # Simulasikan klik tombol Text di overlay toolbar
+    text_btn = None
+    for child in overlay.toolbar.findChildren(QPushButton):
+        if "Text" in child.text() or "🔤" in child.text():
+            text_btn = child
+            break
+    assert text_btn is not None
+    qtbot.mouseClick(text_btn, Qt.MouseButton.LeftButton)
+    
+    # Verifikasi tool pada overlay dan panel berubah menjadi text
+    assert overlay.tool_mode == "text"
+    assert panel.brush_text_tool_button.isChecked() is True
+    
+    # Simulasikan klik tombol Close di overlay toolbar
+    close_btn = None
+    for child in overlay.toolbar.findChildren(QPushButton):
+        if "Close" in child.text() or "❌" in child.text():
+            close_btn = child
+            break
+    assert close_btn is not None
+    qtbot.mouseClick(close_btn, Qt.MouseButton.LeftButton)
+    
+    # Verifikasi drawing mode nonaktif di overlay dan panel
+    assert overlay._is_drawing_enabled is False
+    assert panel.brush_toggle_button.isChecked() is False
+
+

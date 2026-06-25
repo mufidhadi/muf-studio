@@ -97,12 +97,19 @@ def main():
     widget.pause_changed.connect(panel.set_paused_state)
     
     # Alat Coretan Layar (Screen Brush)
+    # Arah A: Panel Kontrol -> Overlay
     panel.brush_mode_toggled.connect(brush_overlay.set_drawing_enabled)
     panel.brush_width_changed.connect(brush_overlay.set_pen_width)
     panel.brush_color_changed.connect(brush_overlay.set_pen_color)
     panel.brush_undo_requested.connect(brush_overlay.undo)
     panel.brush_clear_requested.connect(brush_overlay.clear_all)
     panel.brush_tool_changed.connect(brush_overlay.set_tool_mode)
+
+    # Arah B: Overlay -> Panel Kontrol (Sinkronisasi Dua Arah)
+    brush_overlay.drawing_toggled.connect(panel.set_brush_enabled)
+    brush_overlay.tool_changed.connect(panel.set_brush_tool)
+    brush_overlay.color_changed.connect(panel.set_brush_color)
+    brush_overlay.width_changed.connect(panel.set_brush_width)
 
     # 4. Inisialisasi source kamera pertama saat startup
     initial_source = "mock" if args.mock else "webcam"

@@ -1,12 +1,16 @@
-from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtCore import Qt, QPoint, pyqtSignal
 from PyQt6.QtGui import QPainter, QColor, QPen, QFont, QGuiApplication, QCursor
-from PyQt6.QtWidgets import QWidget, QLineEdit, QApplication
+from PyQt6.QtWidgets import QWidget, QLineEdit, QApplication, QHBoxLayout, QPushButton, QLabel, QButtonGroup
 
 class ScreenBrushOverlay(QWidget):
     """
     Overlay transparan layar penuh (fullscreen) untuk menggambar
     atau membuat coretan guna menjelaskan materi di layar.
     """
+    drawing_toggled = pyqtSignal(bool)
+    tool_changed = pyqtSignal(str)
+    color_changed = pyqtSignal(object)  # QColor
+    width_changed = pyqtSignal(int)
     def __init__(self, parent=None):
         super().__init__(parent)
         
@@ -38,6 +42,9 @@ class ScreenBrushOverlay(QWidget):
         self._is_drawing_active = False
         self.tool_mode = "pen"  # "pen" atau "text"
         self.text_editor = None
+        
+        # 6. Tambahkan Floating Toolbar
+        self.setup_toolbar()
 
     # --- API Kontrol (Dipanggil dari Panel Kontrol) ---
 
@@ -59,6 +66,12 @@ class ScreenBrushOverlay(QWidget):
             
             # Ubah kursor menjadi crosshair untuk menandakan mode corat-coret
             self.setCursor(Qt.CursorShape.CrossCursor)
+            
+            # Tampilkan toolbar
+            if hasattr(self, 'toolbar'):
+                self.toolbar.show()
+                self.toolbar.adjustSize()
+                self.toolbar.move((self.width() - self.toolbar.width()) // 2, 20)
         else:
             # Jika ada text editor aktif, selesaikan
             if self.text_editor is not None:
@@ -68,9 +81,14 @@ class ScreenBrushOverlay(QWidget):
             self.unsetCursor()
             self._is_drawing_active = False
             
+            # Sembunyikan toolbar
+            if hasattr(self, 'toolbar'):
+                self.toolbar.hide()
+            
             # Sembunyikan overlay agar input mouse sepenuhnya kembali ke desktop
             self.hide()
             
+        self.drawing_toggled.emit(enabled)
         self.update()
 
     def set_tool_mode(self, mode):
@@ -79,14 +97,216 @@ class ScreenBrushOverlay(QWidget):
         # Jika ada text editor yang sedang aktif, selesaikan
         if self.text_editor is not None:
             self.text_editor.editingFinished.emit()
+            
+        # Sinkronkan status tombol di toolbar
+        if hasattr(self, 'tb_pen'):
+            self.tb_pen.blockSignals(True)
+            self.tb_text.blockSignals(True)
+            if mode == "pen":
+                self.tb_pen.setChecked(True)
+            else:
+                self.tb_text.setChecked(True)
+            self.tb_pen.blockSignals(False)
+            self.tb_text.blockSignals(False)
 
     def set_pen_color(self, color):
         """Mengatur warna pen saat ini."""
         self.current_color = color
+        
+        # Sinkronkan warna aktif di toolbar
+        if hasattr(self, 'tb_color_buttons'):
+            hex_code = color.name()
+            for btn in self.tb_color_buttons:
+                h = btn.property("color_hex")
+                is_active = (h.lower() == hex_code.lower())
+                border_style = "border: 2px solid #ffffff;" if is_active else "border: 2px solid transparent;"
+                btn.setStyleSheet(f"""
+                    QPushButton {{
+                        background-color: {h};
+                        border-radius: 10px;
+                        {border_style}
+                    }}
+                    QPushButton:hover {{
+                        border: 2px solid #a0aec0;
+                    }}
+                """)
 
     def set_pen_width(self, width):
         """Mengatur ketebalan pen saat ini."""
         self.current_width = width
+        self.width_changed.emit(width)
+
+    def setup_toolbar(self):
+        self.toolbar = QWidget(self)
+        self.toolbar.setObjectName("AnnotationToolbar")
+        self.toolbar.setStyleSheet("""
+            QWidget#AnnotationToolbar {
+                background-color: rgba(15, 15, 21, 0.95);
+                border: 1px solid #ff007f;
+                border-radius: 10px;
+            }
+            QPushButton {
+                background-color: #1a1a24;
+                color: #e2e8f0;
+                border: 1px solid #232330;
+                border-radius: 6px;
+                padding: 4px 8px;
+                font-weight: bold;
+                font-size: 12px;
+            }
+            QPushButton:hover {
+                background-color: #232330;
+                border-color: #00f2fe;
+            }
+            QPushButton:checked {
+                background-color: #ff007f;
+                color: #ffffff;
+                border-color: #ff007f;
+            }
+            QPushButton#CloseButton {
+                background-color: #2d1618;
+                border-color: #e53e3e;
+                color: #feb2b2;
+            }
+            QPushButton#CloseButton:hover {
+                background-color: #e53e3e;
+                color: #ffffff;
+            }
+            QLabel {
+                color: #a0aec0;
+                font-weight: bold;
+                font-size: 11px;
+                padding: 0 4px;
+            }
+        """)
+        
+        layout = QHBoxLayout(self.toolbar)
+        layout.setContentsMargins(12, 6, 12, 6)
+        layout.setSpacing(10)
+        
+        # Label Title/Grip
+        title_label = QLabel("Studio Pen ✏️")
+        layout.addWidget(title_label)
+        
+        # Pemisah
+        sep1 = QLabel("|")
+        sep1.setStyleSheet("color: #232330;")
+        layout.addWidget(sep1)
+        
+        # Button Tool: Pen & Text
+        self.tb_pen = QPushButton("✏️ Pen")
+        self.tb_pen.setCheckable(True)
+        self.tb_pen.setChecked(True)
+        
+        self.tb_text = QPushButton("🔤 Text")
+        self.tb_text.setCheckable(True)
+        
+        self.tb_tool_group = QButtonGroup(self)
+        self.tb_tool_group.addButton(self.tb_pen)
+        self.tb_tool_group.addButton(self.tb_text)
+        self.tb_tool_group.setExclusive(True)
+        
+        self.tb_pen.clicked.connect(lambda: self._on_tb_tool_changed("pen"))
+        self.tb_text.clicked.connect(lambda: self._on_tb_tool_changed("text"))
+        
+        layout.addWidget(self.tb_pen)
+        layout.addWidget(self.tb_text)
+        
+        # Pemisah
+        sep2 = QLabel("|")
+        sep2.setStyleSheet("color: #232330;")
+        layout.addWidget(sep2)
+        
+        # Warna Pen (Circular Buttons)
+        colors = [
+            ("Neon Pink", "#ff007f"),
+            ("Neon Cyan", "#00f2fe"),
+            ("Neon Green", "#00ff87"),
+            ("Neon Yellow", "#ffe259"),
+            ("White", "#ffffff")
+        ]
+        
+        self.tb_color_buttons = []
+        for name, hex_code in colors:
+            btn = QPushButton()
+            btn.setToolTip(name)
+            btn.setFixedSize(20, 20)
+            btn.setProperty("color_hex", hex_code)
+            
+            is_active = (hex_code == "#ff007f")
+            border_style = "border: 2px solid #ffffff;" if is_active else "border: 2px solid transparent;"
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {hex_code};
+                    border-radius: 10px;
+                    {border_style}
+                }}
+                QPushButton:hover {{
+                    border: 2px solid #a0aec0;
+                }}
+            """)
+            btn.clicked.connect(lambda checked, h=hex_code, b=btn: self._on_tb_color_clicked(h, b))
+            self.tb_color_buttons.append(btn)
+            layout.addWidget(btn)
+            
+        # Pemisah
+        sep3 = QLabel("|")
+        sep3.setStyleSheet("color: #232330;")
+        layout.addWidget(sep3)
+        
+        # Tombol Undo & Clear
+        self.tb_undo = QPushButton("↩️ Undo")
+        self.tb_undo.clicked.connect(self.undo)
+        layout.addWidget(self.tb_undo)
+        
+        self.tb_clear = QPushButton("🗑️ Clear")
+        self.tb_clear.clicked.connect(self.clear_all)
+        layout.addWidget(self.tb_clear)
+        
+        # Pemisah
+        sep4 = QLabel("|")
+        sep4.setStyleSheet("color: #232330;")
+        layout.addWidget(sep4)
+        
+        # Tombol Stop/Close
+        self.tb_close = QPushButton("❌ Close")
+        self.tb_close.setObjectName("CloseButton")
+        self.tb_close.clicked.connect(lambda: self.set_drawing_enabled(False))
+        layout.addWidget(self.tb_close)
+        
+        self.toolbar.hide()
+
+    def _on_tb_tool_changed(self, mode):
+        self.set_tool_mode(mode)
+        self.tool_changed.emit(mode)
+
+    def _on_tb_color_clicked(self, hex_code, clicked_button):
+        color = QColor(hex_code)
+        self.set_pen_color(color)
+        
+        # Update style lingkaran aktif di toolbar
+        for btn in self.tb_color_buttons:
+            h = btn.property("color_hex")
+            is_active = (btn == clicked_button)
+            border_style = "border: 2px solid #ffffff;" if is_active else "border: 2px solid transparent;"
+            btn.setStyleSheet(f"""
+                QPushButton {{
+                    background-color: {h};
+                    border-radius: 10px;
+                    {border_style}
+                }}
+                QPushButton:hover {{
+                    border: 2px solid #a0aec0;
+                }}
+            """)
+            
+        self.color_changed.emit(color)
+
+    def resizeEvent(self, event):
+        super().resizeEvent(event)
+        if hasattr(self, 'toolbar') and self.toolbar.isVisible():
+            self.toolbar.adjustSize()
+            self.toolbar.move((self.width() - self.toolbar.width()) // 2, 20)
 
     def start_stroke(self, point):
         """Memulai tarikan coretan baru."""

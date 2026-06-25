@@ -202,3 +202,52 @@ def test_screen_brush_multimonitor_geometry(qtbot, monkeypatch):
     # Verifikasi geometry overlay sesuai dengan mock screen
     assert overlay.geometry() == QRect(100, 200, 1024, 768)
 
+def test_screen_brush_toolbar_initialization(qtbot):
+    """Menguji inisialisasi toolbar pada ScreenBrushOverlay."""
+    overlay = ScreenBrushOverlay()
+    qtbot.addWidget(overlay)
+    
+    assert hasattr(overlay, "toolbar")
+    assert overlay.toolbar is not None
+    # Defaultnya harus tersembunyi
+    assert overlay.toolbar.isHidden()
+    
+    # Tampilkan overlay
+    overlay.set_drawing_enabled(True)
+    assert overlay.toolbar.isVisible()
+
+def test_screen_brush_toolbar_clicks(qtbot):
+    """Menguji bahwa klik pada tombol toolbar mengubah state overlay dengan benar."""
+    from PyQt6.QtWidgets import QPushButton
+    
+    overlay = ScreenBrushOverlay()
+    qtbot.addWidget(overlay)
+    
+    # Aktifkan drawing mode agar toolbar muncul
+    overlay.set_drawing_enabled(True)
+    
+    # Cari tombol text di toolbar
+    text_btn = None
+    for child in overlay.toolbar.findChildren(QPushButton):
+        if "Text" in child.text() or "🔤" in child.text():
+            text_btn = child
+            break
+            
+    assert text_btn is not None
+    qtbot.mouseClick(text_btn, Qt.MouseButton.LeftButton)
+    assert overlay.tool_mode == "text"
+    
+    # Cari tombol Close / Stop
+    stop_btn = None
+    for child in overlay.toolbar.findChildren(QPushButton):
+        if "Close" in child.text() or "❌" in child.text():
+            stop_btn = child
+            break
+            
+    assert stop_btn is not None
+    qtbot.mouseClick(stop_btn, Qt.MouseButton.LeftButton)
+    # Harus menonaktifkan drawing mode
+    assert overlay._is_drawing_enabled is False
+    assert overlay.isHidden() is True
+
+
