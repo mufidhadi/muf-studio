@@ -87,3 +87,71 @@ def test_control_panel_visibility_signal(qtbot):
     
     assert len(signals) == 1
     assert signals[0] is False
+
+def test_control_panel_brush_initialization(qtbot):
+    """Menguji inisialisasi elemen UI alat coretan (screen brush) pada panel kontrol."""
+    panel = ControlPanelWindow()
+    qtbot.addWidget(panel)
+    
+    assert panel.brush_toggle_button is not None
+    assert panel.brush_undo_button is not None
+    assert panel.brush_clear_button is not None
+    assert panel.brush_width_slider is not None
+    assert len(panel.brush_color_buttons) > 0
+
+def test_control_panel_brush_mode_toggled(qtbot):
+    """Menguji emisi sinyal brush_mode_toggled saat tombol coretan diklik."""
+    panel = ControlPanelWindow()
+    qtbot.addWidget(panel)
+    
+    signals = []
+    panel.brush_mode_toggled.connect(signals.append)
+    
+    # Klik tombol toggle mode gambar
+    panel.brush_toggle_button.click()
+    
+    # Secara default mode gambar mati (False), setelah diklik harus menjadi True
+    assert len(signals) == 1
+    assert signals[0] is True
+    
+    # Klik sekali lagi
+    panel.brush_toggle_button.click()
+    assert len(signals) == 2
+    assert signals[1] is False
+
+def test_control_panel_brush_width_changed(qtbot):
+    """Menguji emisi sinyal brush_width_changed saat slider ketebalan pen digeser."""
+    panel = ControlPanelWindow()
+    qtbot.addWidget(panel)
+    
+    signals = []
+    panel.brush_width_changed.connect(signals.append)
+    
+    # Geser slider ketebalan coretan ke 8px
+    panel.brush_width_slider.setValue(8)
+    
+    assert len(signals) == 1
+    assert signals[0] == 8
+
+def test_control_panel_brush_undo_requested(qtbot):
+    """Menguji emisi sinyal brush_undo_requested saat tombol undo diklik."""
+    panel = ControlPanelWindow()
+    qtbot.addWidget(panel)
+    
+    signals = []
+    panel.brush_undo_requested.connect(lambda: signals.append(True))
+    
+    panel.brush_undo_button.click()
+    assert len(signals) == 1
+
+def test_control_panel_brush_clear_requested(qtbot):
+    """Menguji emisi sinyal brush_clear_requested saat tombol clear diklik."""
+    panel = ControlPanelWindow()
+    qtbot.addWidget(panel)
+    
+    signals = []
+    panel.brush_clear_requested.connect(lambda: signals.append(True))
+    
+    panel.brush_clear_button.click()
+    assert len(signals) == 1
+

@@ -1,5 +1,6 @@
 import pytest
 from PyQt6.QtCore import Qt, QPoint
+from PyQt6.QtGui import QColor
 from muf_studio.gui import FloatingWebcamWidget
 from muf_studio.control_panel import ControlPanelWindow
 
@@ -58,3 +59,53 @@ def test_integration_bidirectional_sync(qtbot):
     
     # Periksa apakah slider pada panel kontrol telah tersinkronisasi
     assert panel.size_slider.value() == 400
+
+def test_integration_screen_brush(qtbot):
+    """Menguji koordinasi antara ControlPanelWindow dan ScreenBrushOverlay."""
+    from muf_studio.screen_brush import ScreenBrushOverlay
+    
+    panel = ControlPanelWindow()
+    overlay = ScreenBrushOverlay()
+    
+    qtbot.addWidget(panel)
+    qtbot.addWidget(overlay)
+    
+    # Hubungkan sinyal dari panel kontrol ke overlay
+    panel.brush_mode_toggled.connect(overlay.set_drawing_enabled)
+    panel.brush_width_changed.connect(overlay.set_pen_width)
+    panel.brush_color_changed.connect(overlay.set_pen_color)
+    panel.brush_undo_requested.connect(overlay.undo)
+    panel.brush_clear_requested.connect(overlay.clear_all)
+    
+    # 1. Test Mode Coretan (Brush Mode)
+    assert overlay._is_drawing_enabled is False
+    panel.brush_toggle_button.click()
+    assert overlay._is_drawing_enabled is True
+    
+    # 2. Test Brush Width
+    panel.brush_width_slider.setValue(10)
+    assert overlay.current_width == 10
+    
+    # 3. Test Brush Color
+    # Simulasikan klik tombol warna Neon Cyan (#00f2fe) pada panel
+    # Tombol indeks ke-1 adalah Neon Cyan
+    panel.brush_color_buttons[1].click()
+    assert overlay.current_color == QColor("#00f2fe")
+    
+    # 4. Test Undo & Clear
+    # Tambahkan stroke buatan ke overlay
+    overlay.start_stroke(QPoint(50, 50))
+    assert len(overlay.strokes) == 1
+    
+    # Klik undo dari panel
+    panel.brush_undo_button.click()
+    assert len(overlay.strokes) == 0
+    
+    # Tambahkan stroke lagi
+    overlay.start_stroke(QPoint(50, 50))
+    assert len(overlay.strokes) == 1
+    
+    # Klik clear dari panel
+    panel.brush_clear_button.click()
+    assert len(overlay.strokes) == 0
+

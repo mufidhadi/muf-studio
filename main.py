@@ -5,6 +5,7 @@ from PyQt6.QtWidgets import QApplication
 from muf_studio.camera import MockCameraService, OpenCVCameraService
 from muf_studio.gui import FloatingWebcamWidget
 from muf_studio.control_panel import ControlPanelWindow
+from muf_studio.screen_brush import ScreenBrushOverlay
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -36,9 +37,10 @@ def main():
     app = QApplication(sys.argv)
     app.setApplicationName("Floating Webcam Studio")
     
-    # 2. Inisialisasi Tampilan Widget & Panel Kontrol
+    # 2. Inisialisasi Tampilan Widget, Panel Kontrol, & Brush Overlay
     widget = FloatingWebcamWidget()
     panel = ControlPanelWindow()
+    brush_overlay = ScreenBrushOverlay()
     
     active_thread = None
     fps = args.fps
@@ -93,6 +95,13 @@ def main():
     # Arah B: Floating Widget -> Panel Kontrol
     widget.resized.connect(panel.set_size_value)
     widget.pause_changed.connect(panel.set_paused_state)
+    
+    # Alat Coretan Layar (Screen Brush)
+    panel.brush_mode_toggled.connect(brush_overlay.set_drawing_enabled)
+    panel.brush_width_changed.connect(brush_overlay.set_pen_width)
+    panel.brush_color_changed.connect(brush_overlay.set_pen_color)
+    panel.brush_undo_requested.connect(brush_overlay.undo)
+    panel.brush_clear_requested.connect(brush_overlay.clear_all)
 
     # 4. Inisialisasi source kamera pertama saat startup
     initial_source = "mock" if args.mock else "webcam"
@@ -118,6 +127,9 @@ def main():
     
     # Menghubungkan tombol tutup panel kontrol untuk keluar dari seluruh aplikasi
     panel.setAttribute(Qt.WidgetAttribute.WA_QuitOnClose, True)
+    
+    # Tampilkan overlay coretan di layar
+    brush_overlay.show()
     
     # Run loop
     exit_code = app.exec()
