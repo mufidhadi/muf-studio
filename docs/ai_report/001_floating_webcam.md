@@ -7,7 +7,7 @@ Laporan ini mendokumentasikan pengerjaan pembuatan aplikasi Window GUI Webcam Me
 ## 1. Detail Informasi Tugas
 *   **Nama Tugas:** Pembuatan Window GUI Floating Webcam
 *   **Nama Branch:** `main`
-*   **Nomor Hash Commit:** `5b2901f6e413751d9ecfc73718ee7a0b00698eb7`
+*   **Nomor Hash Commit:** `a8ea5970a146f29d83d901558aa3b190c9b84931`
 *   **Nama & URL Repo:** mufidhadi/muf-studio (https://github.com/mufidhadi/muf-studio)
 *   **Tech Stack:**
     *   Python (CPython >= 3.12)
@@ -48,7 +48,13 @@ Laporan ini mendokumentasikan pengerjaan pembuatan aplikasi Window GUI Webcam Me
     *   Membuat widget control panel `ControlPanelWindow` berisi slider Opacity, Size, checkbox Mirror Mode, combobox Camera Source, tombol Pause/Resume, dan tombol Hide/Show Floating Window.
     *   Mengimplementasikan uji integrasi `tests/test_integration.py` untuk memverifikasi sinkronisasi bi-directional (dua arah) antara widget webcam dan panel kontrol.
     *   Memperbarui `main.py` untuk mengoordinasikan sinyal-sinyal multi-window secara dinamis, menyelaraskan status awal, dan menempatkan kedua window berdampingan secara visual di pojok kanan layar.
-12. **Dokumentasi & Commit:** Menyimpan perubahan kode ke Git dan membuat laporan akhir ini.
+12. **Penambahan Fitur Coret Layar / Screen Annotation (TDD):**
+    *   Membuat branch `feature/screen-brush`.
+    *   Menulis test suite `tests/test_screen_brush.py` untuk menguji overlay coretan fullscreen.
+    *   Mengimplementasikan `ScreenBrushOverlay` di `muf_studio/screen_brush.py` dengan background transparan, stays-on-top, dan mode toggle click-through agar tidak menghalangi desktop saat menggambar nonaktif.
+    *   Menambahkan GroupBox "Screen Annotation Tools" pada panel kontrol untuk memulai/menghentikan menggambar, mengatur lebar kuas, memilih warna neon (Pink, Cyan, Green, Yellow, White), serta tombol Undo dan Clear All.
+    *   Menghubungkan semua sinyal brush ke overlay di `main.py` dan memverifikasinya lewat uji integrasi `tests/test_integration.py`.
+13. **Dokumentasi & Commit:** Menyimpan perubahan kode ke Git dan membuat laporan akhir ini.
 
 ---
 
