@@ -34,6 +34,15 @@ def parse_arguments():
     )
     return parser.parse_args()
 
+def get_asset_path(relative_path):
+    """Mendapatkan path absolut dari aset, mendukung kompilasi PyInstaller."""
+    try:
+        # PyInstaller menyimpan folder ekstraksi sementara di sys._MEIPASS
+        base_path = sys._MEIPASS
+    except AttributeError:
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, relative_path)
+
 def main():
     args = parse_arguments()
     
@@ -42,7 +51,7 @@ def main():
     app.setApplicationName("MufStudio Live Panel")
     
     # Set Window Icon
-    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "logo.png")
+    logo_path = get_asset_path(os.path.join("assets", "logo.png"))
     if os.path.exists(logo_path):
         app.setWindowIcon(QIcon(logo_path))
     
