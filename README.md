@@ -5,7 +5,7 @@ Aplikasi desktop studio presentasi dengan fitur **floating webcam**, **screen an
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue?logo=python&logoColor=white)
 ![PyQt6](https://img.shields.io/badge/PyQt6-6.11-green?logo=qt&logoColor=white)
 ![License](https://img.shields.io/badge/License-Private-red)
-![Tests](https://img.shields.io/badge/Tests-53%20passed-brightgreen)
+![Tests](https://img.shields.io/badge/Tests-60%20passed-brightgreen)
 
 ## ✨ Fitur Utama
 
@@ -30,11 +30,20 @@ Aplikasi desktop studio presentasi dengan fitur **floating webcam**, **screen an
 - **Sinkronisasi dua arah** antara panel kontrol, webcam, dan overlay
 - Pengaturan: opacity, ukuran, mirror, pause, source kamera
 - Pengaturan annotation: toggle, tool, warna, ketebalan, undo, clear
+- Kontrol perekaman layar: pemilihan monitor, pemilihan audio input, dan tombol rekam
 
 ### 🔧 Annotation Toolbar
 - Toolbar mengambang di atas overlay saat mode annotation aktif
 - Akses cepat ke tool, warna, undo, clear, dan close
 - Top-level window terpisah — selalu bisa diklik di atas overlay
+
+### ⏺ Screen Recording
+- **Perekaman Layar Utuh** — Merekam area layar monitor secara utuh.
+- **Pemilihan Monitor** — Opsi memilih monitor mana yang ingin direkam jika terdeteksi lebih dari satu monitor.
+- **Perekaman Audio** — Opsi perekaman input suara mikrofon secara asinkron.
+- **Framerate Stabil & Kecepatan Normal** — Sinkronisasi waktu presisi (`time.perf_counter()`) dengan metode catch-up untuk menjamin playback speed normal (1.0x).
+- **Penggabungan Muxing Lossless** — Penggabungan otomatis audio & video menggunakan `ffmpeg` secara lossless.
+- **Timestamp Auto-Save** — File tersimpan otomatis di direktori `recordings/` dengan format nama `recording_YYYYMMDD_HHMMSS.mp4`.
 
 ## 🏗️ Arsitektur
 
@@ -44,10 +53,11 @@ muf_studio/
 ├── gui.py                 # Floating webcam widget
 ├── control_panel.py       # Panel kontrol utama
 ├── screen_brush.py        # Overlay anotasi layar
-└── annotation_toolbar.py  # Toolbar floating anotasi
+├── annotation_toolbar.py  # Toolbar floating anotasi
+└── recorder.py            # Service perekam layar (Screen & Audio)
 
 main.py                    # Entry point & signal coordination
-tests/                     # Test suite (53 test cases)
+tests/                     # Test suite (60 test cases)
 docs/                      # Dokumentasi & laporan AI
 ```
 
@@ -85,6 +95,7 @@ docs/                      # Dokumentasi & laporan AI
 ### Prasyarat
 - Python 3.12+
 - [uv](https://docs.astral.sh/uv/) (package manager)
+- [FFmpeg](https://ffmpeg.org/) (untuk penggabungan audio & video secara lossless)
 - Webcam (opsional — bisa pakai Mock Camera)
 
 ### Setup
@@ -143,13 +154,15 @@ uv run pytest tests/test_overlay_focus_fix.py::TestOverlayDoesNotStealFocus -v
 | Test File | Jumlah Test | Cakupan |
 |-----------|-------------|---------|
 | `test_camera.py` | 1 | Mock camera service |
+| `test_control_panel.py` | 12 | Panel kontrol & signal |
 | `test_gui.py` | 5 | Floating webcam widget |
-| `test_control_panel.py` | 13 | Panel kontrol & signal |
-| `test_screen_brush.py` | 19 | Overlay, toolbar, stroke, text |
-| `test_integration.py` | 3 | Sinkronisasi bi-directional |
+| `test_screen_brush.py` | 17 | Overlay, toolbar, stroke, text |
+| `test_integration.py` | 4 | Sinkronisasi bi-directional (termasuk perekam) |
 | `test_overlay_focus_fix.py` | 6 | Focus management overlay |
 | `test_text_input_keyboard.py` | 9 | Keyboard input text annotation |
-| **Total** | **53** | — |
+| `test_recorder.py` | 4 | Lifecycle perekam layar & deteksi monitor |
+| `test_recorder_gui.py` | 2 | UI kontrol perekaman layar & audio input |
+| **Total** | **60** | — |
 
 ## 🎨 Keyboard Shortcuts
 
@@ -174,7 +187,8 @@ D:\project\mufid\muf_studio\
 │   ├── gui.py                 # FloatingWebcamWidget
 │   ├── control_panel.py       # ControlPanelWindow
 │   ├── screen_brush.py        # ScreenBrushOverlay
-│   └── annotation_toolbar.py  # AnnotationToolbarWindow
+│   ├── annotation_toolbar.py  # AnnotationToolbarWindow
+│   └── recorder.py            # ScreenRecorderInterface, MSSScreenRecorder, MockScreenRecorder, AudioRecorder
 │
 ├── tests/                     # Test suite
 │   ├── test_camera.py
@@ -183,16 +197,20 @@ D:\project\mufid\muf_studio\
 │   ├── test_screen_brush.py
 │   ├── test_integration.py
 │   ├── test_overlay_focus_fix.py
-│   └── test_text_input_keyboard.py
+│   ├── test_text_input_keyboard.py
+│   ├── test_recorder.py
+│   └── test_recorder_gui.py
 │
 └── docs/                      # Dokumentasi
     ├── planning_floating_webcam.md
+    ├── planning_screen_recording.md
     ├── architecture.md
     └── ai_report/             # Laporan AI per task
         ├── 001_floating_webcam.md
         ├── 002_screen_annotation_text.md
         ├── 005_fix_overlay_focus_stealing_toolbar_unclickable.md
-        └── 006_fix_text_input_keyboard_blocked.md
+        ├── 006_fix_text_input_keyboard_blocked.md
+        └── 007_screen_recording_feature.md
 ```
 
 ## 📝 Dependencies
@@ -200,7 +218,10 @@ D:\project\mufid\muf_studio\
 | Package | Versi | Kegunaan |
 |---------|-------|----------|
 | `pyqt6` | ≥6.11.0 | Framework GUI desktop |
-| `opencv-python` | ≥4.13.0 | Capture dan pemrosesan video kamera |
+| `opencv-python` | ≥4.13.0 | Capture dan pemrosesan video kamera serta video writer |
+| `mss` | ≥10.2.0 | Capture screen monitor performa tinggi |
+| `sounddevice` | ≥0.5.5 | Rekam audio PCM asinkron dari mikrofon |
+| `soundfile` | ≥0.14.0 | Tulis data audio ke file WAV |
 | `pytest` | ≥9.1.1 | Framework testing |
 | `pytest-qt` | ≥4.5.0 | Plugin pytest untuk testing PyQt |
 

@@ -4,23 +4,23 @@ Dokumen ini menjelaskan arsitektur teknis, pola desain, dan alur data pada aplik
 
 ## 1. Gambaran Umum
 
-Muf Studio adalah aplikasi desktop PyQt6 yang terdiri dari **5 komponen utama** yang berkomunikasi via **signal-slot pattern** (decoupled):
+Muf Studio adalah aplikasi desktop PyQt6 yang terdiri dari **6 komponen utama** yang berkomunikasi via **signal-slot pattern** (decoupled):
 
 ```
-┌──────────────────────────────────────────────────────────┐
-│                       main.py                            │
-│               (Coordinator / Wiring Layer)               │
-│                                                          │
-│   Menghubungkan semua signal antar komponen              │
-│   Mengelola lifecycle kamera dan window                  │
-└──────────┬───────────┬──────────┬───────────┬────────────┘
-           │           │          │           │
-           ▼           ▼          ▼           ▼
-    ┌────────────┐ ┌─────────┐ ┌──────────┐ ┌─────────────┐
-    │  Control   │ │Floating │ │  Screen  │ │ Annotation  │
-    │   Panel    │ │ Webcam  │ │  Brush   │ │  Toolbar    │
-    │  Window    │ │ Widget  │ │ Overlay  │ │  Window     │
-    └────────────┘ └─────────┘ └──────────┘ └─────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                               main.py                                  │
+│                     (Coordinator / Wiring Layer)                       │
+│                                                                        │
+│   Menghubungkan semua signal antar komponen                            │
+│   Mengelola lifecycle kamera, window, dan screen recorder             │
+└──────────┬───────────┬──────────┬───────────┬────────────┬─────────────┘
+           │           │          │           │            │
+           ▼           ▼          ▼           ▼            ▼
+    ┌────────────┐ ┌─────────┐ ┌──────────┐ ┌─────────────┐┌────────────┐
+    │  Control   │ │Floating │ │  Screen  │ │ Annotation  ││   Screen   │
+    │   Panel    │ │ Webcam  │ │  Brush   │ │  Toolbar    ││  Recorder  │
+    │  Window    │ │ Widget  │ │ Overlay  │ │  Window     ││  (Service) │
+    └────────────┘ └─────────┘ └──────────┘ └─────────────┘└────────────┘
 ```
 
 ## 2. Komponen Detail
@@ -94,14 +94,32 @@ Toolbar floating yang muncul di atas overlay saat mode annotation aktif.
 
 **Signals emitted**: `close_requested`, `tool_changed(str)`, `color_changed(QColor)`, `undo_requested`, `clear_requested`
 
+### 2.6 ScreenRecorder (`recorder.py`)
+
+Menyediakan fungsionalitas perekaman layar monitor terpilih beserta opsi input audio secara asinkron.
+
+```
+ScreenRecorderInterface (Abstract)
+├── MSSScreenRecorder   — Perekam layar riil (mss + sounddevice + OpenCV + FFmpeg)
+└── MockScreenRecorder  — Implementasi tiruan untuk testing
+```
+
+**Worker Threads & Asynchronous Input**:
+- **`RecorderThread` (`QThread`)** — Menangkap frame layar via `mss.MSS` pada interval waktu presisi menggunakan pelacakan `time.perf_counter()` dan menulisnya ke berkas video menggunakan `cv2.VideoWriter`. Menggunakan metode catch-up (duplikasi frame jika lambat) agar kecepatan pemutaran video normal (1.0x).
+- **`AudioRecorder` (`threading.Thread`)** — Menangkap aliran input suara PCM dari mikrofon terpilih secara asinkron menggunakan buffer `queue.Queue` dari `sounddevice` dan menulisnya ke format WAV menggunakan `soundfile`.
+
+**Penyatuan Audio-Video (Muxing)**:
+Setelah perekaman dihentikan, sistem menggabungkan video (`.temp_video.mp4`) dan audio (`.temp_audio.wav`) temporer menggunakan perintah `ffmpeg` dengan opsi `-c:v copy -c:a aac` secara lossless dan instan, lalu menghapus berkas temporer.
+
 ## 3. Alur Signal (Data Flow)
 
-### 3.1 Tiga Arah Komunikasi
+### 3.1 Tiga Arah Komunikasi Utama & Perekaman
 
 ```
 Arah A: Control Panel ──► Overlay / Webcam
 Arah B: Overlay / Webcam ──► Control Panel (sinkronisasi balik)
 Arah C: Toolbar ──► Overlay & Control Panel
+Arah D: Control Panel ──► Screen Recorder & QTimer (kontrol rekam)
 ```
 
 ### 3.2 Alur Detail: Ganti Warna dari Toolbar
@@ -139,6 +157,33 @@ Arah C: Toolbar ──► Overlay & Control Panel
        ├── Close editor
        ├── set_tool_mode("pen")
        └── Emit tool_changed("pen")
+```
+
+### 3.4 Alur Detail: Perekaman Layar dengan Audio
+
+```
+1. User klik tombol "⏺ Start Recording" di Control Panel
+2. panel._on_record_clicked()
+   └── Emit start_recording_requested(monitor_idx, audio_device_idx)
+3. main.py menerima signal -> start_screen_recording()
+   ├── Hitung timestamp untuk generate output path di recordings/
+   ├── Panggil recorder.start_recording(monitor_idx, output_path, audio_device_idx)
+   │   ├── Buat temp_video_path dan temp_audio_path jika audio aktif
+   │   ├── Mulai RecorderThread (video) & AudioRecorder (audio) secara asinkron
+   ├── Update panel.set_recording_state(True)
+   └── Start recording_timer (QTimer) untuk cacahan waktu
+4. Perekaman berjalan -> QTimer memicu update_recording_time() setiap 1 detik
+   └── panel.set_recording_duration(elapsed)
+5. User klik tombol "🛑 Stop Recording"
+6. panel._on_record_clicked()
+   └── Emit stop_recording_requested()
+7. main.py menerima signal -> stop_screen_recording()
+   ├── Panggil recorder.stop_recording()
+   │   ├── Hentikan thread video & thread audio
+   │   ├── Panggil _merge_audio_video() via FFmpeg subprocess (jika ada audio)
+   │   └── Hapus file temporer
+   ├── Update panel.set_recording_state(False)
+   └── Stop recording_timer
 ```
 
 ## 4. Keputusan Arsitektur
