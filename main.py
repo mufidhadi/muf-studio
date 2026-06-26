@@ -38,7 +38,7 @@ def main():
     
     # 1. Inisialisasi Qt Application
     app = QApplication(sys.argv)
-    app.setApplicationName("Floating Webcam Studio")
+    app.setApplicationName("MufStudio Live Panel")
     
     # 2. Inisialisasi Tampilan Widget, Panel Kontrol, Brush Overlay, & Toolbar Terpisah
     widget = FloatingWebcamWidget()

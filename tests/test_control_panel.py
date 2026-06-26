@@ -8,7 +8,7 @@ def test_control_panel_initialization(qtbot):
     qtbot.addWidget(panel)
     
     # Periksa judul window
-    assert panel.windowTitle() == "Webcam Control Panel"
+    assert panel.windowTitle() == "MufStudio Live Panel"
     
     # Periksa keberadaan komponen utama
     assert panel.opacity_slider is not None

@@ -34,7 +34,7 @@ class ControlPanelWindow(QWidget):
         super().__init__(parent)
         
         # 1. Atur Properti Window
-        self.setWindowTitle("Webcam Control Panel")
+        self.setWindowTitle("MufStudio Live Panel")
         self.setMinimumSize(660, 520)
         self.resize(700, 550)
         
@@ -55,7 +55,7 @@ class ControlPanelWindow(QWidget):
         main_layout.setContentsMargins(20, 20, 20, 20)
         
         # --- Judul Panel ---
-        title_label = QLabel("Floating Webcam Studio")
+        title_label = QLabel("MufStudio Live Panel")
         title_label.setObjectName("TitleLabel")
         main_layout.addWidget(title_label, alignment=Qt.AlignmentFlag.AlignCenter)
         
