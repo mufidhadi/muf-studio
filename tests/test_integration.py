@@ -170,4 +170,43 @@ def test_integration_brush_bidirectional_sync(qtbot):
     assert toolbar.isHidden() is True
     assert panel.brush_toggle_button.isChecked() is False
 
+def test_integration_screen_recorder(qtbot, tmp_path):
+    """Menguji koordinasi antara ControlPanelWindow dan ScreenRecorder menggunakan MockScreenRecorder."""
+    from muf_studio.recorder import MockScreenRecorder
+    
+    panel = ControlPanelWindow()
+    recorder = MockScreenRecorder()
+    
+    qtbot.addWidget(panel)
+    
+    # Simulasikan inisialisasi awal list monitor
+    monitors = recorder.get_available_monitors()
+    panel.set_available_monitors(monitors)
+    
+    # Hubungkan sinyal dari panel kontrol ke recorder
+    def on_start_recording(monitor_idx):
+        output_path = str(tmp_path / "test_recording_run.mp4")
+        success = recorder.start_recording(monitor_idx, output_path)
+        if success:
+            panel.set_recording_state(True)
+            
+    def on_stop_recording():
+        recorder.stop_recording()
+        panel.set_recording_state(False)
+        
+    panel.start_recording_requested.connect(on_start_recording)
+    panel.stop_recording_requested.connect(on_stop_recording)
+    
+    # 1. Mulai perekaman
+    assert not recorder.is_recording()
+    qtbot.mouseClick(panel.record_button, Qt.MouseButton.LeftButton)
+    assert recorder.is_recording()
+    assert panel.record_button.text() == "🛑 Stop Recording"
+    
+    # 2. Hentikan perekaman
+    qtbot.mouseClick(panel.record_button, Qt.MouseButton.LeftButton)
+    assert not recorder.is_recording()
+    assert panel.record_button.text() == "⏺ Start Recording"
+
+
 

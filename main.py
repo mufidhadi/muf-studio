@@ -1,12 +1,14 @@
 import sys
+import os
 import argparse
-from PyQt6.QtCore import Qt
+from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtWidgets import QApplication
 from muf_studio.camera import MockCameraService, OpenCVCameraService
 from muf_studio.gui import FloatingWebcamWidget
 from muf_studio.control_panel import ControlPanelWindow
 from muf_studio.screen_brush import ScreenBrushOverlay
 from muf_studio.annotation_toolbar import AnnotationToolbarWindow
+from muf_studio.recorder import MSSScreenRecorder
 
 def parse_arguments():
     parser = argparse.ArgumentParser(
@@ -42,6 +44,11 @@ def main():
     widget = FloatingWebcamWidget()
     panel = ControlPanelWindow()
     brush_overlay = ScreenBrushOverlay()
+    
+    # Inisialisasi Screen Recorder
+    recorder = MSSScreenRecorder()
+    monitors = recorder.get_available_monitors()
+    panel.set_available_monitors(monitors)
     
     # Toolbar anotasi sebagai window top-level terpisah (BUKAN child dari overlay)
     # Ini solusi untuk bug Windows dimana child widget di dalam window
@@ -131,6 +138,41 @@ def main():
     annotation_toolbar.undo_requested.connect(brush_overlay.undo)
     annotation_toolbar.clear_requested.connect(brush_overlay.clear_all)
 
+    # --- Perekaman Layar (Screen Recording) ---
+    recording_timer = QTimer()
+    recording_timer.setInterval(1000)
+    
+    def update_recording_time():
+        elapsed = recorder.get_elapsed_time()
+        panel.set_recording_duration(elapsed)
+        
+    recording_timer.timeout.connect(update_recording_time)
+    
+    def start_screen_recording(monitor_idx):
+        import datetime
+        now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
+        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings")
+        output_path = os.path.join(output_dir, f"recording_{now_str}.mp4")
+        
+        print(f"Memulai perekaman layar monitor {monitor_idx} ke {output_path}...")
+        success = recorder.start_recording(monitor_idx, output_path)
+        if success:
+            panel.set_recording_state(True)
+            panel.set_recording_duration(0)
+            recording_timer.start()
+            
+    def stop_screen_recording():
+        print("Menghentikan perekaman layar...")
+        recorder.stop_recording()
+        panel.set_recording_state(False)
+        recording_timer.stop()
+        elapsed = recorder.get_elapsed_time()
+        panel.set_recording_duration(elapsed)
+        print("Perekaman layar selesai.")
+        
+    panel.start_recording_requested.connect(start_screen_recording)
+    panel.stop_recording_requested.connect(stop_screen_recording)
+
     # 4. Inisialisasi source kamera pertama saat startup
     initial_source = "mock" if args.mock else "webcam"
     initial_index = args.camera
@@ -165,6 +207,9 @@ def main():
     if active_thread is not None:
         active_thread.stop()
         active_thread.wait()
+        
+    if recorder.is_recording():
+        recorder.stop_recording()
         
     sys.exit(exit_code)
 
