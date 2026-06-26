@@ -89,8 +89,11 @@ class AudioRecorder(threading.Thread):
         self.audio_queue = queue.Queue()
         self._is_running = True
         self.error_message = None
+        self.start_time_perf = None
 
     def _callback(self, indata, frames, time_info, status):
+        if self.start_time_perf is None:
+            self.start_time_perf = time.perf_counter()
         if status:
             print(f"Audio status: {status}")
         self.audio_queue.put(indata.copy())
@@ -136,6 +139,7 @@ class RecorderThread(QThread):
         self.output_path = output_path
         self.fps = fps
         self._is_running = True
+        self.start_time_perf = None
 
     def run(self):
         try:
@@ -160,6 +164,7 @@ class RecorderThread(QThread):
                 
                 delay = 1.0 / self.fps
                 start_time = time.perf_counter()
+                self.start_time_perf = start_time
                 frames_written = 0
                 
                 while self._is_running:
@@ -239,6 +244,10 @@ class MSSScreenRecorder(ScreenRecorderInterface):
         return True
 
     def stop_recording(self):
+        # Ambil timestamp start perf sebelum thread di-stop/wait
+        video_start = self.thread.start_time_perf if self.thread else None
+        audio_start = self.audio_recorder.start_time_perf if self.audio_recorder else None
+        
         # Stop video thread
         if self.thread and self.thread.isRunning():
             self.thread.stop()
@@ -255,26 +264,54 @@ class MSSScreenRecorder(ScreenRecorderInterface):
         
         # Merge audio & video jika diperlukan
         if self.temp_video_path and self.temp_audio_path and self.final_output_path:
-            self._merge_audio_video(self.temp_video_path, self.temp_audio_path, self.final_output_path)
+            self._merge_audio_video(self.temp_video_path, self.temp_audio_path, self.final_output_path, video_start, audio_start)
             self.temp_video_path = None
             self.temp_audio_path = None
             
-    def _merge_audio_video(self, video_path, audio_path, final_path):
+    def _merge_audio_video(self, video_path, audio_path, final_path, video_start=None, audio_start=None):
         try:
             # Command ffmpeg untuk merge video dan audio tanpa re-encoding video
             # -y menimpa file yang sudah ada
             # -c:v copy menyalin data video secara langsung
             # -c:a aac mengompresi audio WAV menjadi format AAC
-            cmd = [
-                "ffmpeg", "-y",
-                "-i", video_path,
-                "-i", audio_path,
+            cmd = ["ffmpeg", "-y"]
+            
+            if video_start is not None and audio_start is not None:
+                offset = video_start - audio_start
+                print(f"A/V Sync Offset: {offset:.3f} s (video: {video_start:.3f}, audio: {audio_start:.3f})")
+                
+                if offset > 0:
+                    # Video mulai belakangan dibanding audio. Tunda audio.
+                    cmd.extend([
+                        "-i", video_path,
+                        "-itsoffset", f"{offset:.3f}",
+                        "-i", audio_path
+                    ])
+                elif offset < 0:
+                    # Audio mulai belakangan dibanding video. Tunda video.
+                    cmd.extend([
+                        "-itsoffset", f"{abs(offset):.3f}",
+                        "-i", video_path,
+                        "-i", audio_path
+                    ])
+                else:
+                    cmd.extend([
+                        "-i", video_path,
+                        "-i", audio_path
+                    ])
+            else:
+                cmd.extend([
+                    "-i", video_path,
+                    "-i", audio_path
+                ])
+                
+            cmd.extend([
                 "-c:v", "copy",
                 "-c:a", "aac",
                 "-map", "0:v:0",
                 "-map", "1:a:0",
                 final_path
-            ]
+            ])
             result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, check=True)
             
             # Hapus file temporer jika berhasil
