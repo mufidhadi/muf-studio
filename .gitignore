@@ -8,3 +8,11 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Screen recordings & media files
+recordings/
+recording/
+*.mp4
+*.wav
+*.temp_video.mp4
+*.temp_audio.wav

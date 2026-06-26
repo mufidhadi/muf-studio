@@ -26,13 +26,17 @@ class ControlPanelWindow(QWidget):
     brush_clear_requested = pyqtSignal()
     brush_tool_changed = pyqtSignal(str)
 
+    # Sinyal kustom untuk Perekaman Layar (Screen Recording)
+    start_recording_requested = pyqtSignal(int, int)
+    stop_recording_requested = pyqtSignal()
+
     def __init__(self, parent=None):
         super().__init__(parent)
         
         # 1. Atur Properti Window
         self.setWindowTitle("Webcam Control Panel")
-        self.setMinimumSize(320, 580)
-        self.resize(360, 620)
+        self.setMinimumSize(320, 680)
+        self.resize(360, 720)
         
         # 2. State Internal
         self._is_visible_state = True
@@ -217,6 +221,46 @@ class ControlPanelWindow(QWidget):
         
         main_layout.addWidget(brush_group)
         
+        # --- Group Box 4: Kontrol Perekaman Layar (Screen Recording) ---
+        self.recording_group = QGroupBox("Screen Recording Controls")
+        recording_layout = QVBoxLayout(self.recording_group)
+        recording_layout.setSpacing(12)
+        recording_layout.setContentsMargins(15, 20, 15, 15)
+        
+        # Pemilihan Monitor
+        monitor_layout = QHBoxLayout()
+        monitor_layout.addWidget(QLabel("Select Monitor:"))
+        self.monitor_combo = QComboBox()
+        self.monitor_combo.addItem("Primary Monitor", 0)
+        monitor_layout.addWidget(self.monitor_combo)
+        recording_layout.addLayout(monitor_layout)
+        
+        # Pemilihan Audio Input
+        audio_layout = QHBoxLayout()
+        audio_layout.addWidget(QLabel("Audio Input:"))
+        self.audio_combo = QComboBox()
+        self.audio_combo.addItem("No Audio (Muted)", -1)
+        audio_layout.addWidget(self.audio_combo)
+        recording_layout.addLayout(audio_layout)
+        
+        # Status Perekaman
+        status_row_layout = QHBoxLayout()
+        status_row_layout.addWidget(QLabel("Status:"))
+        self.record_status_label = QLabel("Ready")
+        self.record_status_label.setObjectName("RecordStatusLabel")
+        self.record_status_label.setStyleSheet("font-weight: bold;")
+        status_row_layout.addWidget(self.record_status_label)
+        status_row_layout.addStretch()
+        recording_layout.addLayout(status_row_layout)
+        
+        # Tombol Record
+        self.record_button = QPushButton("⏺ Start Recording")
+        self.record_button.setObjectName("RecordButton")
+        self.record_button.setProperty("active", "false")
+        recording_layout.addWidget(self.record_button)
+        
+        main_layout.addWidget(self.recording_group)
+        
         # --- Tombol Aksi Utama ---
         self.visibility_button = QPushButton("👁 Hide Floating Window")
         self.visibility_button.setObjectName("VisibilityButton")
@@ -351,6 +395,17 @@ class ControlPanelWindow(QWidget):
                 color: #0f0f15;
                 border-color: #00f2fe;
             }
+            #RecordButton[active="true"] {
+                color: #ff3b30;
+                border-color: #ff3b30;
+                background-color: #2c0b0b;
+            }
+            #RecordStatusLabel {
+                color: #718096;
+            }
+            #RecordStatusLabel[active="true"] {
+                color: #ff3b30;
+            }
         """)
 
     def connect_signals(self):
@@ -370,6 +425,9 @@ class ControlPanelWindow(QWidget):
         self.brush_clear_button.clicked.connect(self.brush_clear_requested.emit)
         self.brush_pen_tool_button.clicked.connect(lambda: self.brush_tool_changed.emit("pen"))
         self.brush_text_tool_button.clicked.connect(lambda: self.brush_tool_changed.emit("text"))
+        
+        # Perekaman Layar
+        self.record_button.clicked.connect(self._on_record_clicked)
 
     # --- Handlers Internal ---
     
@@ -519,4 +577,60 @@ class ControlPanelWindow(QWidget):
         self.brush_width_slider.setValue(value)
         self.brush_width_val_label.setText(f"{value}px")
         self.brush_width_slider.blockSignals(False)
+
+    # --- Screen Recording Handlers & Sync Setters ---
+    
+    def _on_record_clicked(self):
+        is_active = self.record_button.property("active") == "true"
+        if not is_active:
+            monitor_idx = self.monitor_combo.currentData()
+            if monitor_idx is None:
+                monitor_idx = 0
+            audio_idx = self.audio_combo.currentData()
+            if audio_idx is None:
+                audio_idx = -1
+            self.start_recording_requested.emit(monitor_idx, audio_idx)
+        else:
+            self.stop_recording_requested.emit()
+
+    def set_available_audio_devices(self, devices):
+        self.audio_combo.clear()
+        self.audio_combo.addItem("No Audio (Muted)", -1)
+        for d in devices:
+            text = f"{d['name']}"
+            self.audio_combo.addItem(text, d['index'])
+
+    def set_available_monitors(self, monitors):
+        self.monitor_combo.clear()
+        for m in monitors:
+            text = f"{m['name']} ({m['width']}x{m['height']})"
+            self.monitor_combo.addItem(text, m['index'])
+            
+        if len(monitors) <= 1:
+            self.monitor_combo.setEnabled(False)
+        else:
+            self.monitor_combo.setEnabled(True)
+
+    def set_recording_state(self, is_recording):
+        if is_recording:
+            self.record_button.setText("🛑 Stop Recording")
+            self.record_button.setProperty("active", "true")
+            self.record_status_label.setText("Recording")
+            self.record_status_label.setProperty("active", "true")
+        else:
+            self.record_button.setText("⏺ Start Recording")
+            self.record_button.setProperty("active", "false")
+            self.record_status_label.setText("Ready")
+            self.record_status_label.setProperty("active", "false")
+            
+        self.record_button.style().unpolish(self.record_button)
+        self.record_button.style().polish(self.record_button)
+        self.record_status_label.style().unpolish(self.record_status_label)
+        self.record_status_label.style().polish(self.record_status_label)
+
+    def set_recording_duration(self, seconds):
+        mins = seconds // 60
+        secs = seconds % 60
+        self.record_status_label.setText(f"REC {mins:02d}:{secs:02d}")
+
 
