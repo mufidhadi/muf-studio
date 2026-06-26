@@ -22,6 +22,7 @@ Implementasi fitur screen recording yang merekam keseluruhan layar. Jika sistem 
 ## Nomor Hash Commit
 - `9e3dbc5` (feat: implement screen recording with multi-monitor selection)
 - `4c5dc56` (fix: normal video framerate and add audio input device selection)
+- `f03c160` (Merge branch 'feature/screen-recording' into main)
 
 ## Nama Branch
 `feature/screen-recording`
