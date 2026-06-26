@@ -35,8 +35,8 @@ class ControlPanelWindow(QWidget):
         
         # 1. Atur Properti Window
         self.setWindowTitle("Webcam Control Panel")
-        self.setMinimumSize(320, 680)
-        self.resize(360, 720)
+        self.setMinimumSize(660, 520)
+        self.resize(700, 550)
         
         # 2. State Internal
         self._is_visible_state = True
@@ -98,8 +98,6 @@ class ControlPanelWindow(QWidget):
         self.mirror_checkbox.setChecked(True)
         window_layout.addWidget(self.mirror_checkbox, 2, 0, 1, 3)
         
-        main_layout.addWidget(window_group)
-        
         # --- Group Box 2: Pengaturan Kamera ---
         camera_group = QGroupBox("Camera Feed Settings")
         camera_layout = QVBoxLayout(camera_group)
@@ -120,8 +118,6 @@ class ControlPanelWindow(QWidget):
         self.pause_button = QPushButton("⏸ Pause Feed")
         self.pause_button.setObjectName("PauseButton")
         camera_layout.addWidget(self.pause_button)
-        
-        main_layout.addWidget(camera_group)
         
         # --- Group Box 3: Alat Coretan Layar (Screen Annotation) ---
         brush_group = QGroupBox("Screen Annotation Tools")
@@ -219,8 +215,6 @@ class ControlPanelWindow(QWidget):
         action_layout.addWidget(self.brush_clear_button)
         brush_layout.addLayout(action_layout)
         
-        main_layout.addWidget(brush_group)
-        
         # --- Group Box 4: Kontrol Perekaman Layar (Screen Recording) ---
         self.recording_group = QGroupBox("Screen Recording Controls")
         recording_layout = QVBoxLayout(self.recording_group)
@@ -259,7 +253,19 @@ class ControlPanelWindow(QWidget):
         self.record_button.setProperty("active", "false")
         recording_layout.addWidget(self.record_button)
         
-        main_layout.addWidget(self.recording_group)
+        # --- Pengaturan Layout 2x2 (Grid) ---
+        grid_layout = QGridLayout()
+        grid_layout.setSpacing(16)
+        
+        # Baris 1: floating window setting | camera feed setting
+        grid_layout.addWidget(window_group, 0, 0)
+        grid_layout.addWidget(camera_group, 0, 1)
+        
+        # Baris 2: screen anotation tools | screen recording control
+        grid_layout.addWidget(brush_group, 1, 0)
+        grid_layout.addWidget(self.recording_group, 1, 1)
+        
+        main_layout.addLayout(grid_layout)
         
         # --- Tombol Aksi Utama ---
         self.visibility_button = QPushButton("👁 Hide Floating Window")
