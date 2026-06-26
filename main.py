@@ -2,6 +2,7 @@ import sys
 import os
 import argparse
 from PyQt6.QtCore import Qt, QTimer
+from PyQt6.QtGui import QIcon
 from PyQt6.QtWidgets import QApplication
 from muf_studio.camera import MockCameraService, OpenCVCameraService
 from muf_studio.gui import FloatingWebcamWidget
@@ -39,6 +40,11 @@ def main():
     # 1. Inisialisasi Qt Application
     app = QApplication(sys.argv)
     app.setApplicationName("MufStudio Live Panel")
+    
+    # Set Window Icon
+    logo_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "assets", "logo.png")
+    if os.path.exists(logo_path):
+        app.setWindowIcon(QIcon(logo_path))
     
     # 2. Inisialisasi Tampilan Widget, Panel Kontrol, Brush Overlay, & Toolbar Terpisah
     widget = FloatingWebcamWidget()

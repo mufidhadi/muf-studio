@@ -1,6 +1,6 @@
-# 🎬 Muf Studio
+# <img src="assets/logo.png" width="38" height="38" valign="middle"> MufStudio Live Panel
 
-Aplikasi desktop studio presentasi dengan fitur **floating webcam**, **screen annotation**, dan **control panel** — dibangun dengan PyQt6 untuk Windows.
+Aplikasi desktop studio presentasi dengan fitur **floating webcam**, **screen annotation**, **control panel**, dan **screen recording** — dibangun dengan PyQt6 untuk Windows.
 
 ![Python 3.12+](https://img.shields.io/badge/Python-3.12+-blue?logo=python&logoColor=white)
 ![PyQt6](https://img.shields.io/badge/PyQt6-6.11-green?logo=qt&logoColor=white)
