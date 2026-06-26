@@ -179,14 +179,16 @@ def test_integration_screen_recorder(qtbot, tmp_path):
     
     qtbot.addWidget(panel)
     
-    # Simulasikan inisialisasi awal list monitor
+    # Simulasikan inisialisasi awal list monitor dan device audio
     monitors = recorder.get_available_monitors()
     panel.set_available_monitors(monitors)
+    devices = recorder.get_available_audio_devices()
+    panel.set_available_audio_devices(devices)
     
     # Hubungkan sinyal dari panel kontrol ke recorder
-    def on_start_recording(monitor_idx):
+    def on_start_recording(monitor_idx, audio_device_idx):
         output_path = str(tmp_path / "test_recording_run.mp4")
-        success = recorder.start_recording(monitor_idx, output_path)
+        success = recorder.start_recording(monitor_idx, output_path, audio_device_idx)
         if success:
             panel.set_recording_state(True)
             

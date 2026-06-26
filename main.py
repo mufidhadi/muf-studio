@@ -49,6 +49,8 @@ def main():
     recorder = MSSScreenRecorder()
     monitors = recorder.get_available_monitors()
     panel.set_available_monitors(monitors)
+    audio_devices = recorder.get_available_audio_devices()
+    panel.set_available_audio_devices(audio_devices)
     
     # Toolbar anotasi sebagai window top-level terpisah (BUKAN child dari overlay)
     # Ini solusi untuk bug Windows dimana child widget di dalam window
@@ -148,14 +150,14 @@ def main():
         
     recording_timer.timeout.connect(update_recording_time)
     
-    def start_screen_recording(monitor_idx):
+    def start_screen_recording(monitor_idx, audio_device_idx):
         import datetime
         now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
         output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings")
         output_path = os.path.join(output_dir, f"recording_{now_str}.mp4")
         
-        print(f"Memulai perekaman layar monitor {monitor_idx} ke {output_path}...")
-        success = recorder.start_recording(monitor_idx, output_path)
+        print(f"Memulai perekaman layar monitor {monitor_idx} (audio device: {audio_device_idx}) ke {output_path}...")
+        success = recorder.start_recording(monitor_idx, output_path, audio_device_idx)
         if success:
             panel.set_recording_state(True)
             panel.set_recording_duration(0)

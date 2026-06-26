@@ -18,7 +18,7 @@ def test_mock_screen_recorder_lifecycle(tmp_path):
     
     # Start recording
     output_path = str(tmp_path / "dummy.mp4")
-    success = recorder.start_recording(monitor_idx=0, output_path=output_path)
+    success = recorder.start_recording(monitor_idx=0, output_path=output_path, audio_device_idx=0)
     assert success
     assert recorder.is_recording()
     
@@ -39,3 +39,12 @@ def test_mss_screen_recorder_get_monitors():
         assert "name" in m
         assert "width" in m
         assert "height" in m
+
+def test_mss_screen_recorder_get_audio_devices():
+    recorder = MSSScreenRecorder()
+    devices = recorder.get_available_audio_devices()
+    assert isinstance(devices, list)
+    for dev in devices:
+        assert "index" in dev
+        assert "name" in dev
+        assert "channels" in dev

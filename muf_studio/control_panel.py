@@ -27,7 +27,7 @@ class ControlPanelWindow(QWidget):
     brush_tool_changed = pyqtSignal(str)
 
     # Sinyal kustom untuk Perekaman Layar (Screen Recording)
-    start_recording_requested = pyqtSignal(int)
+    start_recording_requested = pyqtSignal(int, int)
     stop_recording_requested = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -234,6 +234,14 @@ class ControlPanelWindow(QWidget):
         self.monitor_combo.addItem("Primary Monitor", 0)
         monitor_layout.addWidget(self.monitor_combo)
         recording_layout.addLayout(monitor_layout)
+        
+        # Pemilihan Audio Input
+        audio_layout = QHBoxLayout()
+        audio_layout.addWidget(QLabel("Audio Input:"))
+        self.audio_combo = QComboBox()
+        self.audio_combo.addItem("No Audio (Muted)", -1)
+        audio_layout.addWidget(self.audio_combo)
+        recording_layout.addLayout(audio_layout)
         
         # Status Perekaman
         status_row_layout = QHBoxLayout()
@@ -578,9 +586,19 @@ class ControlPanelWindow(QWidget):
             monitor_idx = self.monitor_combo.currentData()
             if monitor_idx is None:
                 monitor_idx = 0
-            self.start_recording_requested.emit(monitor_idx)
+            audio_idx = self.audio_combo.currentData()
+            if audio_idx is None:
+                audio_idx = -1
+            self.start_recording_requested.emit(monitor_idx, audio_idx)
         else:
             self.stop_recording_requested.emit()
+
+    def set_available_audio_devices(self, devices):
+        self.audio_combo.clear()
+        self.audio_combo.addItem("No Audio (Muted)", -1)
+        for d in devices:
+            text = f"{d['name']}"
+            self.audio_combo.addItem(text, d['index'])
 
     def set_available_monitors(self, monitors):
         self.monitor_combo.clear()

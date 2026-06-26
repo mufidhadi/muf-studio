@@ -9,6 +9,7 @@ def test_recording_ui_elements_exist(qtbot):
     # Verifikasi bahwa elemen UI kontrol perekaman layar ada
     assert hasattr(panel, "recording_group")
     assert hasattr(panel, "monitor_combo")
+    assert hasattr(panel, "audio_combo")
     assert hasattr(panel, "record_button")
     assert hasattr(panel, "record_status_label")
 
@@ -28,7 +29,7 @@ def test_recording_signals_emitted(qtbot):
     # Test ketika tombol ditekan saat idle -> memicu start_recording_requested dengan index monitor terpilih
     with qtbot.waitSignal(panel.start_recording_requested) as blocker:
         qtbot.mouseClick(panel.record_button, Qt.MouseButton.LeftButton)
-    assert blocker.args == [1]
+    assert blocker.args == [1, -1]
     
     # Simulasikan transisi status perekaman menjadi aktif
     panel.set_recording_state(True)
