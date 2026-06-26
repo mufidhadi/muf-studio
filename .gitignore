@@ -11,6 +11,7 @@ wheels/
 
 # Screen recordings & media files
 recordings/
+recording/
 *.mp4
 *.wav
 *.temp_video.mp4
