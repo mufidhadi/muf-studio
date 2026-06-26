@@ -43,6 +43,16 @@ def get_asset_path(relative_path):
         base_path = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(base_path, relative_path)
 
+def get_recordings_dir():
+    """Mendapatkan path direktori kerja untuk menyimpan rekaman (recordings/)."""
+    if getattr(sys, 'frozen', False):
+        # Jika dijalankan sebagai executable (.exe) kompilasi PyInstaller
+        base_path = os.path.dirname(sys.executable)
+    else:
+        # Jika dijalankan sebagai script python normal
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(base_path, "recordings")
+
 def main():
     args = parse_arguments()
     
@@ -168,7 +178,7 @@ def main():
     def start_screen_recording(monitor_idx, audio_device_idx):
         import datetime
         now_str = datetime.datetime.now().strftime("%Y%m%d_%H%M%S")
-        output_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "recordings")
+        output_dir = get_recordings_dir()
         output_path = os.path.join(output_dir, f"recording_{now_str}.mp4")
         
         print(f"Memulai perekaman layar monitor {monitor_idx} (audio device: {audio_device_idx}) ke {output_path}...")
